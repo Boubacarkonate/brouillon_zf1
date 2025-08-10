@@ -1,0 +1,13 @@
+<h1>Une erreur est survenue</h1>
+
+<p>
+    <?php echo $this->escape($this->message); ?>
+</p>
+
+<?php if (APPLICATION_ENV === 'development'): ?>
+    <h2>Détails de l'exception :</h2>
+    <pre><?php echo $this->exception; ?></pre>
+
+    <h3>Request :</h3>
+    <pre><?php var_dump($this->request->getParams()); ?></pre>
+<?php endif; ?>

@@ -1,0 +1,20 @@
+<h1>Vérifier si une adresse est en Quartier Prioritaire</h1>
+
+<?php echo $this->form; ?>
+
+<?php if (!empty($this->result)): ?>
+    <h3>Résultat :</h3>
+    <p> Quartier Prioritaire : <?= $this->result['reponses'][0]['code_reponse'] ?></p>
+    <?php
+    if ($this->result['reponses'][0]['code_reponse'] == 'NON') {
+        if ($this->result['reponses'][1]['code_reponse'] == 'OUI') {
+            echo 'est à 300 mètre d\'un quartier prioritaire.';
+        } elseif ($this->result['reponses'][2]['code_reponse'] == 'OUI') {
+            echo 'est à 300 mètre d\'un quartier prioritaire.';
+        } else {
+            echo 'cette adresse ne fait pas parti d\'un quartier prioritaire';
+        }
+    } ?>
+    <pre><?php echo print_r($this->result, true); ?></pre>
+
+<?php endif; ?>

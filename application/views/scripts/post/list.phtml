@@ -1,0 +1,16 @@
+<h1>Liste des posts</h1>
+
+<p>Page demandée : <?php echo $this->escape($this->page); ?></p>
+
+<ul>
+    <?php if (!empty($this->posts)): ?>
+    <?php foreach ($this->posts as $post): ?>
+    <li>
+        <strong><?php echo $this->escape($post['title']); ?></strong><br>
+        <?php echo nl2br($this->escape($post['content'])); ?>
+    </li>
+    <?php endforeach; ?>
+    <?php else: ?>
+    <li>Aucun post trouvé.</li>
+    <?php endif; ?>
+</ul>
