@@ -1,0 +1,8 @@
+<h2>Un user</h2>
+
+<?php if ($this->user): ?>
+    <p><strong>Nom :</strong> <?= $this->user['nom']; ?></p>
+    <p><strong>Email :</strong> <?= $this->user['email']; ?></p>
+<?php else: ?>
+    <p>Utilisateur introuvable.</p>
+<?php endif; ?>

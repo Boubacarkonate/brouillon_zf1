@@ -1,0 +1,19 @@
+<h1>Formulaire Email</h1>
+
+<?php
+// Si le formulaire contient des erreurs, on peut les afficher ici
+if ($this->formulaire->getMessages()) {
+    echo '<div style="color:red;">';
+    echo '<ul>';
+    foreach ($this->formulaire->getMessages() as $element => $messages) {
+        foreach ($messages as $message) {
+            echo '<li>' . $this->escape($element) . ' : ' . $this->escape($message) . '</li>';
+        }
+    }
+    echo '</ul>';
+    echo '</div>';
+}
+
+// Affichage du formulaire complet
+echo $this->formulaire;
+?>

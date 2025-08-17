@@ -1,0 +1,11 @@
+<h2>Liste des users</h2>
+
+<?php
+if (count($this->list) > 0) {
+    foreach ($this->list as $element) {; ?>
+        <p><?= $element['nom'] ?> : <?= $element['email'] ?></p>
+    <?php } ?>
+
+<?php } else {
+    echo "il n'y a pas d'users !";
+}; ?>
