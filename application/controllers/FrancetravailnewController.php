@@ -1,51 +1,56 @@
 <?php
 class FrancetravailnewController extends Zend_Controller_Action
 {
+    // $clientId = "PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622";
+    // $clientSecret = "995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598";
+    //         $url = "https://api.francetravail.io/partenaire/offresdemploi/v2/referentiel/communes";
+
+    /**
+     * Page qui affiche le widget + le sélecteur
+     */
     public function indexAction()
     {
-        $api = new Application_Model_Francetravail();
+        $clientId = "PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622";
+        $clientSecret = "995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598";
 
-        try {
-            $profil = [
-                'departement'         => '75',
-                'distance'        => 20,
-                'motsCles'        => 'développeur web',
-                // 'codeROME'        => 'M1805',
-                'origineOffre'    => 2,
-                'range'           => '0-9'
-            ];
-            //             $profil = [
-            //     'departement'                     => '75',        // Code INSEE de la commune
-            //     'distance'                     => 20,            // Rayon en km autour de la commune
-            //     'motsCles'                     => 'développeur web',
-            //     // 'codeROME'                     => 'M1805',       // Métier ROME
-            //     // 'appellation'                  => '38444',       // Code appellation ROME
-            //     // 'codeNAF'                      => '62.01Z',      // Code NAF (activité)
-            //     // 'accesTravailleurHandicape'    => false,         // filtrer les offres accessibles aux travailleurs handicapés
-            //     'origineOffre'                 => 2,             // 0=France Travail, 1=Partenaire, 2=les deux
-            //     'range'                        => '0-49',        // pagination
-            //     //'dateDebut'                    => date('Y-m-d'), // optionnel : date de début publication
-            // ];
+        $ft = new Application_Model_Francetravail($clientId, $clientSecret);
+        $token = $ft->getToken();
 
-            $result = $api->searchOffres($profil);
+        // On passe juste le token à la vue
+        $this->view->francetravailToken = $token;
+    }
 
-            $offres = [];
-            if (!empty($result['resultats'])) {
-                foreach ($result['resultats'] as $offre) {
-                    $offres[] = [
-                        'titre'       => $offre['intitule'] ?? 'N/A',
-                        'entreprise'  => $offre['entreprise']['nom'] ?? 'N/A',
-                        'ville'       => $offre['lieuTravail']['libelle'] ?? 'N/A',
-                        'contrat'     => $offre['typeContrat'] ?? 'N/A',
-                        'date'        => $offre['dateCreation'] ?? 'N/A',
-                        'lien'        => $offre['origineOffre']['urlOrigine'] ?? 'N/A',
-                    ];
-                }
-            }
+    /**
+     * Action qui sert de proxy pour récupérer les communes
+     */
+    public function communesAction()
+    {
+        $this->_helper->viewRenderer->setNoRender();
+        $this->_helper->layout->disableLayout();
 
-            $this->view->offres = $offres;
-        } catch (Exception $e) {
-            $this->view->error = $e->getMessage();
-        }
+        $clientId = "PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622";
+        $clientSecret = "995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598";
+
+        $ft = new Application_Model_Francetravail($clientId, $clientSecret);
+        $token = $ft->getToken();
+
+        $url = "https://api.francetravail.io/partenaire/offresdemploi/v2/referentiel/communes";
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            "Authorization: Bearer $token",
+            "Accept: application/json"
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setHttpResponseCode($httpCode)
+            ->setBody($response);
     }
 }

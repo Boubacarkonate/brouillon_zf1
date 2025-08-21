@@ -1,30 +1,43 @@
-<?php if (!empty($this->offres)): ?>
-    <table border="1" cellpadding="5">
-        <tr>
-            <th>Titre du poste</th>
-            <th>Entreprise</th>
-            <th>Localisation</th>
-            <th>Type de contrat</th>
-            <th>Date de publication</th>
-            <th>Lien</th>
-        </tr>
-        <?php foreach ($this->offres as $offre): ?>
-            <tr>
-                <td><?php echo $this->escape($offre['titre']); ?></td>
-                <td><?php echo $this->escape($offre['entreprise']); ?></td>
-                <td><?php echo $this->escape($offre['ville']); ?></td>
-                <td><?php echo $this->escape($offre['contrat']); ?></td>
-                <td><?php echo $this->escape($offre['date']); ?></td>
-                <td>
-                    <?php if ($offre['lien'] !== 'N/A'): ?>
-                        <a href="<?php echo $this->escape($offre['lien']); ?>" target="_blank">Voir l'offre</a>
-                    <?php else: ?>
-                        N/A
-                    <?php endif; ?>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-    </table>
-<?php else: ?>
-    <p>Aucune offre trouvée pour vos critères.</p>
-<?php endif; ?>
+<script src="https://francetravail.io/data/widget/pe-offres-emploi.js"></script>
+
+<!-- Sélecteur de commune -->
+<select id="communes">
+    <option value="">-- Choisir une commune --</option>
+</select>
+
+<!-- Widget France Travail -->
+<pe-offres-emploi></pe-offres-emploi>
+
+<script>
+    // Sélection du widget
+    var macarte = document.querySelector('pe-offres-emploi');
+    macarte.options = {
+        theme: "light",
+        display: "list"
+    };
+    macarte.token = "<?php echo $this->francetravailToken; ?>";
+
+    // Charger les communes via l’action communesAction
+    fetch("<?php echo $this->url(array('controller' => 'francetravailnew', 'action' => 'communes')); ?>")
+        .then(res => res.json())
+        .then(communes => {
+            const select = document.getElementById("communes");
+            communes.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c.code; // code INSEE
+                opt.textContent = `${c.libelle} (${c.codePostal})`;
+                select.appendChild(opt);
+            });
+
+            // Quand l'utilisateur choisit une commune
+            select.addEventListener("change", function() {
+                const codeCommune = this.value;
+                if (codeCommune) {
+                    macarte.options = {
+                        ...macarte.options,
+                        commune: codeCommune
+                    };
+                }
+            });
+        });
+</script>
