@@ -1,43 +1,58 @@
-<script src="https://francetravail.io/data/widget/pe-offres-emploi.js"></script>
-
-<!-- Sélecteur de commune -->
-<select id="communes">
-    <option value="">-- Choisir une commune --</option>
-</select>
-
-<!-- Widget France Travail -->
-<pe-offres-emploi></pe-offres-emploi>
+<h1>Offres d'emploi France Travail</h1>
 
 <script>
-    // Sélection du widget
-    var macarte = document.querySelector('pe-offres-emploi');
-    macarte.options = {
-        theme: "light",
-        display: "list"
-    };
-    macarte.token = "<?php echo $this->francetravailToken; ?>";
+const offres = <?= json_encode($this->offres ?? []) ?>;
+</script>
 
-    // Charger les communes via l’action communesAction
-    fetch("<?php echo $this->url(array('controller' => 'francetravailnew', 'action' => 'communes')); ?>")
-        .then(res => res.json())
-        .then(communes => {
-            const select = document.getElementById("communes");
-            communes.forEach(c => {
-                const opt = document.createElement("option");
-                opt.value = c.code; // code INSEE
-                opt.textContent = `${c.libelle} (${c.codePostal})`;
-                select.appendChild(opt);
-            });
+<form method="get">
+    <input type="text" name="motsCles" value="<?= $this->escape($this->params['motsCles'] ?? '') ?>"
+        placeholder="Mots-clés">
+    <input type="text" name="departement" value="<?= $this->escape($this->params['departement'] ?? '') ?>"
+        placeholder="Département">
+    <button type="submit">Rechercher</button>
+</form>
 
-            // Quand l'utilisateur choisit une commune
-            select.addEventListener("change", function() {
-                const codeCommune = this.value;
-                if (codeCommune) {
-                    macarte.options = {
-                        ...macarte.options,
-                        commune: codeCommune
-                    };
-                }
-            });
-        });
+<?php if (!empty($this->error)): ?>
+<div class="error"><?= $this->escape($this->error) ?></div>
+<?php endif; ?>
+
+<?php if (!empty($this->offres)): ?>
+<?php $page = $this->page ?? 0; ?>
+<div class="offres-container">
+    <?php foreach ($this->offres as $offre): ?>
+    <div class="offre-card">
+        <h2><?= $this->escape($offre['intitule'] ?? '') ?></h2>
+        <p><strong>Entreprise :</strong> <?= $this->escape($offre['entreprise']['nom'] ?? 'N/A') ?></p>
+        <p><strong>Lieu :</strong> <?= $this->escape($offre['lieuTravail']['libelle'] ?? 'N/A') ?></p>
+        <p><strong>Contrat :</strong> <?= $this->escape($offre['typeContrat'] ?? 'N/A') ?></p>
+        <p><strong>Expérience :</strong> <?= $this->escape($offre['experience'] ?? 'N/A') ?></p>
+        <p><strong>Salaire :</strong>
+            <?php if (!empty($offre['salaireMin']) || !empty($offre['salaireMax'])): ?>
+            <?= $this->escape($offre['salaireMin'] ?? '') ?>
+            <?= (!empty($offre['salaireMin']) && !empty($offre['salaireMax'])) ? '-' : '' ?>
+            <?= $this->escape($offre['salaireMax'] ?? '') ?> €
+            <?php else: ?>
+            N/A
+            <?php endif; ?>
+        </p>
+        <p><strong>Date publication :</strong> <?= $this->escape($offre['dateCreation'] ?? '') ?></p>
+        <a class="btn-postuler" href="<?= $this->escape($offre['urlPostulation'] ?? '#') ?>"
+            target="_blank">Postuler</a>
+    </div>
+    <?php endforeach; ?>
+</div>
+
+<div class="pagination">
+    <?php if ($page > 0): ?>
+    <a href="?<?= http_build_query(array_merge($this->params, ['page' => $page - 1])) ?>">← Précédent</a>
+    <?php endif; ?>
+    <a href="?<?= http_build_query(array_merge($this->params, ['page' => $page + 1])) ?>">Suivant →</a>
+</div>
+
+<?php else: ?>
+<p>Aucune offre trouvée.</p>
+<?php endif; ?>
+
+<script>
+console.log(offres);
 </script>

@@ -1,56 +1,70 @@
 <?php
-class FrancetravailnewController extends Zend_Controller_Action
+
+class FranceTravailnewController extends Zend_Controller_Action
 {
-    // $clientId = "PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622";
-    // $clientSecret = "995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598";
-    //         $url = "https://api.francetravail.io/partenaire/offresdemploi/v2/referentiel/communes";
-
-    /**
-     * Page qui affiche le widget + le sélecteur
-     */
-    public function indexAction()
+    public function init()
     {
-        $clientId = "PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622";
-        $clientSecret = "995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598";
+        parent::init();
 
-        $ft = new Application_Model_Francetravail($clientId, $clientSecret);
-        $token = $ft->getToken();
-
-        // On passe juste le token à la vue
-        $this->view->francetravailToken = $token;
+        error_log("[FranceTravailController] Init du contrôleur");
     }
 
-    /**
-     * Action qui sert de proxy pour récupérer les communes
-     */
-    public function communesAction()
+    public function indexAction()
     {
-        $this->_helper->viewRenderer->setNoRender();
-        $this->_helper->layout->disableLayout();
+        $model = new Application_Model_Francetravail();
 
-        $clientId = "PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622";
-        $clientSecret = "995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598";
+        $page = (int) $this->_getParam('page', 0);
+        $perPage = 10;
+        $motsCles = $this->_getParam('motsCles', '');
+        $departement = $this->_getParam('departement', '');
 
-        $ft = new Application_Model_Francetravail($clientId, $clientSecret);
-        $token = $ft->getToken();
+        error_log("[FranceTravailController] Paramètres reçus : page=$page, motsCles=$motsCles, departement=$departement");
 
-        $url = "https://api.francetravail.io/partenaire/offresdemploi/v2/referentiel/communes";
+        $params = [
+            'motsCles'    => $motsCles,
+            'departement' => $departement,
+            'page'        => $page,
+            'perPage'     => $perPage
+        ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer $token",
-            "Accept: application/json"
-        ]);
+        try {
+            $result = $model->searchOffres($params);
+            error_log("[FranceTravailController] Nombre d'offres reçues : " . print_r($result['resultats']));
+        } catch (Exception $e) {
+            $this->view->error = $e->getMessage();
+            error_log("[FranceTravailController] Erreur lors de la récupération des resultats : " . $e->getMessage());
+            $result = ['resultats' => []];
+        }
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        $this->view->offres   = $result['resultats'] ?? [];
+        $this->view->page     = $page;
+        $this->view->perPage  = $perPage;
+        $this->view->params   = $params;
 
-        $this->getResponse()
-            ->setHeader('Content-Type', 'application/json')
-            ->setHttpResponseCode($httpCode)
-            ->setBody($response);
+        error_log("[FranceTravailController] Fin indexAction, affichage des offres");
+    }
+
+    public function competenceAction()
+    {
+        $codeRome = $this->_getParam('codeRome', null);
+        $libelle  = $this->_getParam('libelle', null);
+
+        $params = [];
+        if (!empty($codeRome)) {
+            $params['codeRome'] = $codeRome;
+        }
+        if (!empty($libelle)) {
+            $params['libelle'] = $libelle;
+        }
+
+        // Si aucun paramètre, on met un code ROME par défaut (exemple : M1805 = Études et développement informatique)
+        if (empty($params)) {
+            $params['codeRome'] = 'M1805';
+        }
+
+        $francetravail = new Application_Model_Francetravail();
+        $listeCompetences = $francetravail->searchCompetence($params);
+
+        $this->view->competences = $listeCompetences;
     }
 }

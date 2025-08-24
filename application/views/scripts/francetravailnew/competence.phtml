@@ -1,0 +1,16 @@
+<h1>Liste des compétences France Travail</h1>
+
+<?php if (!empty($this->competences)) : ?>
+<ul>
+    <?php foreach ($this->competences as $comp) : ?>
+    <li>
+        <?= htmlspecialchars($comp['libelle'] ?? '') ?>
+        <?php if (!empty($comp['code'])): ?>
+        (Code : <?= htmlspecialchars($comp['code']) ?>)
+        <?php endif; ?>
+    </li>
+    <?php endforeach; ?>
+</ul>
+<?php else: ?>
+<p>Aucune compétence trouvée.</p>
+<?php endif; ?>
