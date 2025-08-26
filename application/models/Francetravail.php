@@ -12,9 +12,14 @@ class Application_Model_Francetravail
     protected $apiBaseUrlCompetence   = 'https://api.francetravail.io/partenaire/rome-competences/v1/competences';
     protected $scopeCompetence        = 'api_rome-competencesv1 nomenclatureRome';
     protected $accessToken;
-    protected $accessTokenCompetence;
+    protected $apiBaseUrlFicheMetier   = 'https://api.francetravail.io/partenaire/rome-fiches-metiers';
+    protected $scopeFicheMetier        = 'api_rome-fiches-metiersv1 nomenclatureRome';
+    protected $accessTokenFicheMetier;
     protected $tokenExpiresAt;
     protected $tokenCompetenceExpiresAt;
+    protected $tokenFicheMetierExpiresAt;
+    protected $accessTokenCompetence;
+
 
 
 
@@ -245,6 +250,92 @@ class Application_Model_Francetravail
 
         $data = json_decode($response->getBody(), true);
         error_log("[FranceTravail] Réponse API compétences : " . json_encode($data));
+        return $data;
+    }
+
+    public function tokenFicheRome()
+    {
+        if ($this->accessTokenFicheMetier && $this->tokenFicheMetierExpiresAt && time() < $this->tokenFicheMetierExpiresAt) {
+            error_log("[FranceTravail] Utilisation du token existant");
+            return $this->accessTokenFicheMetier;
+        }
+
+        error_log("[FranceTravail] Demande d'un nouveau token");
+
+        $client = new Zend_Http_Client($this->tokenUrl);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
+        $client->setParameterPost([
+            'grant_type'    => 'client_credentials',
+            'client_id'     => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'scope'         => $this->scopeFicheMetier
+        ]);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl',
+            'curloptions' => [
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
+            ]
+        ]);
+
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            error_log("[FranceTravail] Erreur Token : " . $response->getBody());
+            throw new Exception("Erreur Token : " . $response->getBody());
+        }
+
+        $data = json_decode($response->getBody(), true);
+        if (empty($data['access_token'])) {
+            error_log("[FranceTravail] Impossible de récupérer le token : " . $response->getBody());
+            throw new Exception("Impossible de récupérer le token : " . $response->getBody());
+        }
+
+        $this->accessTokenFicheMetier = $data['access_token'];
+
+        if (!empty($data['expires_in'])) {
+            $this->tokenFicheMetierExpiresAt = time() + (int) $data['expires_in'] - 30;
+        }
+
+        error_log("[FranceTravail] Token récupéré avec succès");
+        return $this->accessTokenFicheMetier;
+    }
+
+
+    public function getAccessTokenFicheRome()
+    {
+        return $this->tokenFicheRome();
+    }
+    public function ficheMetier(array $params = [])
+    {
+        $codeMetier = 'M1607'; // tu pourras le passer en paramètre ensuite si tu veux
+
+        // Récupération du token
+        $token = $this->getAccessTokenFicheRome();
+        error_log("[FranceTravail] Token pour fiche-metier : " . substr($token, 0, 10) . '...');
+
+        // Appel API fiche-metier
+        $client = new Zend_Http_Client($this->apiBaseUrlFicheMetier . '/v1/fiches-rome/fiche-metier/' . $codeMetier);
+        $client->setMethod(Zend_Http_Client::GET);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json'
+        ]);
+        $client->setParameterGet($params);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl'
+        ]);
+
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API fiche-metier : " . $response->getBody());
+        }
+
+        $data = json_decode($response->getBody(), true);
+        error_log("[FranceTravail] Réponse fiche-metier : " . substr($response->getBody(), 0, 200) . '...');
         return $data;
     }
 }

@@ -1,0 +1,44 @@
+<h1>Fiche Métier</h1>
+
+<?php if (!empty($this->ficheMetier)) : ?>
+    <h2>Métier : <?= htmlspecialchars($this->ficheMetier['metier']['libelle'] ?? '-') ?></h2>
+
+    <h3>Compétences mobilisées :</h3>
+    <ul>
+        <?php if (!empty($this->ficheMetier['groupesCompetencesMobilisees'])) :
+            foreach ($this->ficheMetier['groupesCompetencesMobilisees'] as $groupe) : ?>
+                <li><strong>Enjeu :</strong> <?= htmlspecialchars($groupe['enjeu']['libelle'] ?? '-') ?></li>
+                <?php if (!empty($groupe['competences'])) :
+                    foreach ($groupe['competences'] as $comp) : ?>
+                        <li>
+                            <?= htmlspecialchars($comp['libelle']) ?>
+                            (<?= htmlspecialchars($comp['code']) ?>)
+                        </li>
+                <?php endforeach;
+                endif; ?>
+            <?php endforeach;
+        else : ?>
+            <li>-</li>
+        <?php endif; ?>
+    </ul>
+
+    <h3>Savoirs :</h3>
+    <ul>
+        <?php if (!empty($this->ficheMetier['groupesSavoirs'])) :
+            foreach ($this->ficheMetier['groupesSavoirs'] as $groupe) :
+                if (!empty($groupe['savoirs'])) :
+                    foreach ($groupe['savoirs'] as $savoir) : ?>
+                        <li>
+                            <?= htmlspecialchars($savoir['libelle']) ?>
+                            (<?= htmlspecialchars($savoir['code']) ?>)
+                        </li>
+            <?php endforeach;
+                endif;
+            endforeach;
+        else : ?>
+            <li>-</li>
+        <?php endif; ?>
+    </ul>
+<?php else : ?>
+    <p>Aucune donnée disponible.</p>
+<?php endif; ?>

@@ -67,4 +67,27 @@ class FranceTravailnewController extends Zend_Controller_Action
 
         $this->view->competences = $listeCompetences;
     }
+
+    public function fichemetierAction()
+    {
+        $params = [
+            'champs' => 'code,groupescompetencesmobilisees(competences(libelle,code),enjeu(libelle,code)),groupessavoirs(savoirs(libelle,code),categoriesavoirs(libelle,code)),metier(libelle,code)'
+        ];
+
+        $francetravail = new Application_Model_Francetravail();
+
+        try {
+            $ficheMetier = $francetravail->ficheMetier($params);
+            // echo '<pre>';
+            // print_r($ficheMetier);
+            // echo '</pre>';
+            // exit;
+
+            $this->view->ficheMetier = $ficheMetier;
+            $this->view->error = null;
+        } catch (Exception $e) {
+            $this->view->ficheMetier = [];
+            $this->view->error = $e->getMessage();
+        }
+    }
 }
