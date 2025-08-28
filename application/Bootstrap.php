@@ -9,4 +9,12 @@ class Bootstrap extends Zend_Application_Bootstrap_Bootstrap
         ));
         return $autoloader;
     }
+
+    protected function _initLayout()
+    {
+        Zend_Layout::startMvc(array(
+            'layoutPath' => APPLICATION_PATH . '/layouts/scripts/',
+            'layout'     => 'layout' // nom du fichier layout.phtml
+        ));
+    }
 }

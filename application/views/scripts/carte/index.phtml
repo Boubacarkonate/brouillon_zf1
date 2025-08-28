@@ -1,0 +1,20 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<div id="map" style="height:500px;"></div>
+
+<script>
+    var locations = <?php echo json_encode($this->locations); ?>;
+
+    var map = L.map('map').setView([48.8566, 2.3522], 2); // zoom global
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    locations.forEach(function(loc) {
+        L.marker([loc.lat, loc.lng])
+            .addTo(map)
+            .bindPopup(loc.name);
+    });
+</script>

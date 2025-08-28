@@ -1,0 +1,24 @@
+<?php if (!empty($this->liste)) : ?>
+    <div class="row">
+        <?php foreach ($this->liste as $produit) : ?>
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="<?= $produit['image'] ?? 'placeholder.png' ?>" class="card-img-top"
+                        alt="<?= $this->escape($produit['nom']); ?>">
+                    <div class="card-body">
+                        <h5 class="card-title"><?= $this->escape($produit['nom']) ?></h5>
+                        <p class="card-text"><?= $this->escape($produit['description']) ?></p>
+                        <p class="card-text">Prix : <?= $this->escape($produit['prix']) ?> €</p>
+                        <p class="card-text">Stock : <?= $this->escape($produit['stock']) ?></p>
+                        <a href="<?= $this->url(array('controller' => 'produit', 'action' => 'unproduit', 'id' => $produit['id'])) ?>"
+                            class="btn btn-primary">
+                            Voir le produit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php else: ?>
+    <p>Aucun produit trouvé.</p>
+<?php endif; ?>
