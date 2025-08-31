@@ -1,0 +1,17 @@
+<?php if (!empty($this->messages)) : ?>
+    <div class="alert alert-danger">
+        <?php foreach ($this->messages as $msg) : ?>
+            <?= $this->escape($msg) ?><br>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
+<?= $this->formulaire ?>
+
+<?php
+$auth = Zend_Auth::getInstance();
+if ($auth->hasIdentity()): ?>
+    <p>Bonjour, <?= $this->escape($auth->getIdentity()['email']); ?> !</p>
+<?php else: ?>
+    <p>Vous n'êtes pas connecté.</p>
+<?php endif; ?>

@@ -1,4 +1,31 @@
-<h1><?= $this->escape($this->produit['nom']) ?></h1>
-<p><?= $this->escape($this->produit['description']) ?></p>
-<p>Prix : <?= $this->escape($this->produit['prix']) ?> €</p>
-<p>Stock : <?= $this->escape($this->produit['stock']) ?></p>
+<h2>Fiche détaillée : <?= $this->escape($this->produit['nom']) ?></h2>
+
+<div class="card" style="width: 18rem;">
+    <img src="..." class="card-img-top" alt="Image produit">
+    <div class="card-body">
+        <h5 class="card-title"><?= $this->escape($this->produit['nom']) ?></h5>
+        <p class="card-text">Description : <?= $this->escape($this->produit['description']) ?></p>
+        <p class="card-text">Prix : <?= $this->escape($this->produit['prix']) ?> €</p>
+        <p class="card-text">Stock : <?= $this->escape($this->produit['stock']) ?></p>
+
+        <!-- Formulaire POST pour supprimer -->
+        <form method="post" action="<?php echo $this->url(array(
+                                        'controller' => 'produit',
+                                        'action' => 'suppression',
+                                        'id' => $this->produit['id']
+                                    )); ?>" onsubmit="return confirm('Voulez-vous vraiment supprimer ce produit ?');">
+            <button type="submit" class="btn btn-danger">Supprimer</button>
+        </form>
+        <!-- Formulaire POST pour modifer -->
+
+        <!-- Lien pour modifier -->
+        <a href="<?php echo $this->url(array(
+                        'controller' => 'produit',
+                        'action' => 'modification',
+                        'id' => $this->produit['id']
+                    )); ?>" class="btn btn-warning">Modifier</a>
+
+        <a href="<?php echo $this->url(array('controller' => 'produit', 'action' => 'listeproduit')); ?>"
+            class="btn btn-secondary">Retour à la liste</a>
+    </div>
+</div>

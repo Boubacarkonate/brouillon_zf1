@@ -1,0 +1,12 @@
+<h2>Ajouter un produit</h2>
+
+<?php if (!empty($this->message)) : ?>
+    <div class="alert alert-success">
+        <?= $this->escape($this->message) ?>
+    </div>
+<?php endif; ?>
+
+<?php
+// Affiche le formulaire avec les décorateurs Bootstrap
+echo $this->formulaire;
+?>

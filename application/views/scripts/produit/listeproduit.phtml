@@ -1,3 +1,11 @@
+<?php if (!empty($this->messages)) : ?>
+    <div class="alert alert-success">
+        <?php foreach ($this->messages as $msg) : ?>
+            <?= $this->escape($msg) ?><br>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
+
 <?php if (!empty($this->liste)) : ?>
     <div class="row">
         <?php foreach ($this->liste as $produit) : ?>

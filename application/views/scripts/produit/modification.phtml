@@ -1,1 +1,8 @@
-<?php echo $this->message;
+<h2>Modifier le produit</h2>
+<form method="post">
+    <p>Nom: <input type="text" name="nom" value="<?= $this->escape($this->produit['nom']) ?>"></p>
+    <p>Description: <textarea name="description"><?= $this->escape($this->produit['description']) ?></textarea></p>
+    <p>Prix: <input type="text" name="prix" value="<?= $this->escape($this->produit['prix']) ?>"></p>
+    <p>Stock: <input type="number" name="stock" value="<?= $this->escape($this->produit['stock']) ?>"></p>
+    <p><button type="submit">Mettre à jour</button></p>
+</form>

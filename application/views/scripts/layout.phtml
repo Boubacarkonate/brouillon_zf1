@@ -1,3 +1,6 @@
+<?php $auth = Zend_Auth::getInstance(); //session initialisé
+?>
+
 <!doctype html>
 <html lang="en">
 
@@ -30,12 +33,24 @@
                             des
                             produits</a>
                     </li>
-                    <!-- <li class="nav-item">
-                        <a class="nav-link" href="<?php echo $this->url(array('controller' => 'produit', 'action' => 'listeproduit')); ?>">Pricing</a>
-                    </li>
                     <li class="nav-item">
-                        <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-                    </li> -->
+                        <a class="nav-link"
+                            href="<?php echo $this->url(array('controller' => 'produit', 'action' => 'ajout')); ?>">Nouveau
+                            produit</a>
+                    </li>
+                    <?php if ($auth->hasIdentity()): ?>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="<?php echo $this->url(array('controller' => 'utilisateur', 'action' => 'logout')); ?>">Deconnexion
+                            </a>
+                        </li>
+                    <?php else : ?>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="<?php echo $this->url(array('controller' => 'utilisateur', 'action' => 'login')); ?>">Connexion
+                            </a>
+                        </li>
+                    <?php endif ?>
                 </ul>
             </div>
         </div>
