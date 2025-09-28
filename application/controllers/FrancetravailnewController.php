@@ -287,4 +287,45 @@ class FranceTravailnewController extends Zend_Controller_Action
         $token = $model->getTokenWidget();
         $this->view->francetravailToken = $token;
     }
+
+    public function entrepriserecrutementAction()
+    {
+        $params = [
+            'citycode' => $this->_getParam('citycode'),
+            'rome'     => $this->_getParam('rome'),
+            'distance' => $this->_getParam('distance', 10)
+        ];
+
+        $annuaire = new Application_Model_Annuaire();
+        $model    = new Application_Model_Francetravail();
+
+        try {
+            error_log("[BonneBoiteController] Recherche Bonne Boite avec params : " . json_encode($params));
+
+            // Appel La Bonne Boîte
+            $resultats   = $model->getLaBonneBoite($params);
+            $entreprises = $resultats['companies'] ?? $resultats['results'] ?? $resultats ?? [];
+
+            // Enrichissement avec Annuaire Entreprises
+            $details = $annuaire->getInfosEntreprise('');    //test
+
+
+            // Passage à la vue
+            $this->view->resultats = $entreprises;
+            $this->view->citycode  = $params['citycode'];
+            $this->view->rome      = $params['rome'];
+            $this->view->distance  = $params['distance'];
+            $this->view->message   = "Résultats Bonne Boite récupérés avec succès.";
+
+            error_log("[BonneBoiteController] Nombre de résultats : " . count($entreprises));
+        } catch (Exception $e) {
+            $this->view->resultats = [];
+            $this->view->citycode  = $params['citycode'];
+            $this->view->rome      = $params['rome'];
+            $this->view->distance  = $params['distance'];
+            $this->view->message   = "Erreur lors de l’appel à Bonne Boite : " . $e->getMessage();
+
+            error_log("[BonneBoiteController] Erreur Bonne Boite : " . $e->getMessage());
+        }
+    }
 }

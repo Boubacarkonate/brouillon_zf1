@@ -20,6 +20,14 @@ class Application_Model_Francetravail
     protected $tokenFicheMetierExpiresAt;
     protected $accessTokenCompetence;
 
+    protected $apiBaseUrlBonneBoite   = 'https://api.francetravail.io/partenaire/labonneboite/v2';
+    protected $scopeBonneBoite        = 'api_labonneboitev2 search office';
+    protected $accessTokenBonneBoite;
+    protected $tokenBonneBoiteExpiresAt;
+
+
+
+
     // === Instarlink (Match via Soft Skills) ===
     // protected $instarlinkApiId     = 'TON_API_ID';
     // protected $instarlinkApiKey    = 'TON_API_KEY';
@@ -441,6 +449,95 @@ class Application_Model_Francetravail
         $response = $client->request('POST');
         if (!$response->isSuccessful()) {
             throw new Exception("Erreur API France Travail : " . $response->getStatus() . ' ' . $response->getMessage());
+        }
+
+        return json_decode($response->getBody(), true);
+    }
+
+    // ---------------------------
+    // TOKEN Bonne Boite
+    // ---------------------------
+    public function tokenBonneBoite()
+    {
+        if ($this->accessTokenBonneBoite && $this->tokenBonneBoiteExpiresAt && time() < $this->tokenBonneBoiteExpiresAt) {
+            error_log("[FranceTravail] Utilisation du token existant - Bonne Boite");
+            return $this->accessTokenBonneBoite;
+        }
+
+        error_log("[FranceTravail - Bonne Boite] Demande d'un nouveau token");
+
+        $client = new Zend_Http_Client($this->tokenUrl);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
+        $client->setParameterPost([
+            'grant_type'    => 'client_credentials',
+            'client_id'     => $this->clientId,     // ⚠️ mettre ton clientId BonneBoite
+            'client_secret' => $this->clientSecret, // ⚠️ mettre ton clientSecret BonneBoite
+            'scope'         => $this->scopeBonneBoite         // ⚠️ ex: 'api_labonneboite'
+        ]);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl',
+            'curloptions' => [
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
+            ]
+        ]);
+
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            error_log("[FranceTravail] Erreur Token Bonne Boite : " . $response->getBody());
+            throw new Exception("Erreur Token Bonne Boite : " . $response->getBody());
+        }
+
+        $data = json_decode($response->getBody(), true);
+        if (empty($data['access_token'])) {
+            error_log("[FranceTravail] Impossible de récupérer le token Bonne Boite : " . $response->getBody());
+            throw new Exception("Impossible de récupérer le token Bonne Boite : " . $response->getBody());
+        }
+
+        $this->accessTokenBonneBoite = $data['access_token'];
+        if (!empty($data['expires_in'])) {
+            $this->tokenBonneBoiteExpiresAt = time() + (int)$data['expires_in'] - 30;
+        }
+
+        error_log("[FranceTravail] Token Bonne Boite récupéré avec succès");
+        return $this->accessTokenBonneBoite;
+    }
+
+    public function getAccessTokenBonneBoite()
+    {
+        return $this->tokenBonneBoite();
+    }
+
+    // ---------------------------
+    // API Bonne Boite : recherche
+    // ---------------------------
+    public function getLaBonneBoite(array $params = [])
+    {
+        $token = $this->getAccessTokenBonneBoite();
+        error_log("[FranceTravail] Token pour Bonne Boite : " . substr($token, 0, 10) . "...");
+
+        $client = new Zend_Http_Client($this->apiBaseUrlBonneBoite . '/recherche');
+        $client->setMethod(Zend_Http_Client::GET);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json'
+        ]);
+        $client->setParameterGet($params);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl'
+        ]);
+
+        $response = $client->request();
+
+        error_log("[FranceTravail] Code HTTP API Bonne Boite : " . $response->getStatus());
+        error_log("[FranceTravail] Corps de la réponse Bonne Boite : " . substr($response->getBody(), 0, 200) . "...");
+
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API Bonne Boite : " . $response->getBody());
         }
 
         return json_decode($response->getBody(), true);
