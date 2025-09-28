@@ -1,0 +1,29 @@
+<script src="https://francetravail.io/data/widget/pe-offres-emploi.js"></script>
+
+<div class="d-flex flex-column h-100">
+    <pe-offres-emploi></pe-offres-emploi>
+</div>
+
+<script>
+    var macarte = document.querySelector('pe-offres-emploi');
+
+    macarte.options = {
+        zoomInitial: 6.5,
+        // criterias: {
+        //     localisation: {
+        //         value: "92160 ANTONY", // ✅ clé correcte
+        //         show: true,
+        //         order: 0
+        //     },
+        //     distance: {
+        //         value: 20, // tu peux mettre une valeur par défaut
+        //         show: true,
+        //         order: 1,
+        //         min: 0,
+        //         max: 100
+        //     }
+        // }
+    };
+
+    macarte.token = "<?php echo $this->francetravailToken; ?>";
+</script>

@@ -1,58 +1,393 @@
-<h1>Offres d'emploi France Travail</h1>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+<!-- PAGE AVEC FILTRE, CARTE ET PAGINATION ---->
+<h1 class="mb-4 text-primary fw-bold">💼 Offres d'emploi France Travail</h1>
 
-<script>
-const offres = <?= json_encode($this->offres ?? []) ?>;
-</script>
 
-<form method="get">
-    <input type="text" name="motsCles" value="<?= $this->escape($this->params['motsCles'] ?? '') ?>"
-        placeholder="Mots-clés">
-    <input type="text" name="departement" value="<?= $this->escape($this->params['departement'] ?? '') ?>"
-        placeholder="Département">
-    <button type="submit">Rechercher</button>
-</form>
-
-<?php if (!empty($this->error)): ?>
-<div class="error"><?= $this->escape($this->error) ?></div>
-<?php endif; ?>
-
-<?php if (!empty($this->offres)): ?>
-<?php $page = $this->page ?? 0; ?>
-<div class="offres-container">
-    <?php foreach ($this->offres as $offre): ?>
-    <div class="offre-card">
-        <h2><?= $this->escape($offre['intitule'] ?? '') ?></h2>
-        <p><strong>Entreprise :</strong> <?= $this->escape($offre['entreprise']['nom'] ?? 'N/A') ?></p>
-        <p><strong>Lieu :</strong> <?= $this->escape($offre['lieuTravail']['libelle'] ?? 'N/A') ?></p>
-        <p><strong>Contrat :</strong> <?= $this->escape($offre['typeContrat'] ?? 'N/A') ?></p>
-        <p><strong>Expérience :</strong> <?= $this->escape($offre['experience'] ?? 'N/A') ?></p>
-        <p><strong>Salaire :</strong>
-            <?php if (!empty($offre['salaireMin']) || !empty($offre['salaireMax'])): ?>
-            <?= $this->escape($offre['salaireMin'] ?? '') ?>
-            <?= (!empty($offre['salaireMin']) && !empty($offre['salaireMax'])) ? '-' : '' ?>
-            <?= $this->escape($offre['salaireMax'] ?? '') ?> €
-            <?php else: ?>
-            N/A
-            <?php endif; ?>
-        </p>
-        <p><strong>Date publication :</strong> <?= $this->escape($offre['dateCreation'] ?? '') ?></p>
-        <a class="btn-postuler" href="<?= $this->escape($offre['urlPostulation'] ?? '#') ?>"
-            target="_blank">Postuler</a>
+<!-- Filtres modernisés qui tiennent sur une ligne-->
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-header bg-light fw-bold text-primary">
+        <i class="bi bi-funnel-fill"></i> Filtres de recherche
     </div>
-    <?php endforeach; ?>
+    <div class="card-body">
+        <form method="get" class="d-flex flex-nowrap align-items-end gap-3 overflow-auto">
+
+            <div style="min-width:220px;">
+                <label class="form-label text-muted">Projet</label>
+                <select id="selectProjet" class="form-select shadow-sm">
+                    <option value="">-- Choisir un projet --</option>
+                    <?php foreach ($this->projet as $nom => $data): ?>
+                        <option value="<?= htmlspecialchars(json_encode($data)) ?>">
+                            <?= $this->escape($nom) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div style="min-width:220px;">
+                <label class="form-label text-muted">Mots-clés</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="motsCles" id="motsCles" class="form-control border-start-0"
+                        value="<?= $this->escape($this->params['motsCles'] ?? '') ?>">
+                </div>
+            </div>
+
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Commune</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
+                    <input type="text" name="commune" id="commune" class="form-control border-start-0"
+                        value="<?= $this->escape($this->params['commune'] ?? '') ?>">
+                </div>
+            </div>
+
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Distance (km)</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-arrows-expand"></i></span>
+                    <input type="number" name="distance" class="form-control border-start-0"
+                        value="<?= $this->escape($this->params['distance'] ?? 100) ?>" min="0">
+                </div>
+            </div>
+
+            <?php foreach ($this->filtresDynamiques as $filtreNom => $valeurs): ?>
+                <div style="min-width:180px;">
+                    <label class="form-label text-muted"><?= ucfirst($this->escape($filtreNom)) ?></label>
+                    <select name="<?= $this->escape($filtreNom) ?>" class="form-select shadow-sm">
+                        <option value="">Tous <?= $this->escape($filtreNom) ?></option>
+                        <?php foreach ($valeurs as $code => $libelle): ?>
+                            <option value="<?= $this->escape($code) ?>"
+                                <?= ($this->escape($this->params[$filtreNom] ?? '') === $code) ? 'selected' : '' ?>>
+                                <?= $this->escape($libelle) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            <?php endforeach; ?>
+
+            <div class="d-grid" style="min-width:150px;">
+                <button type="submit" class="btn btn-primary shadow-sm">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
-<div class="pagination">
-    <?php if ($page > 0): ?>
-    <a href="?<?= http_build_query(array_merge($this->params, ['page' => $page - 1])) ?>">← Précédent</a>
-    <?php endif; ?>
-    <a href="?<?= http_build_query(array_merge($this->params, ['page' => $page + 1])) ?>">Suivant →</a>
+
+
+
+<div class="row">
+    <!-- Offres -->
+    <div class="col-md-3">
+        <?php if (!empty($this->offres)): ?>
+            <div class="d-flex flex-column gap-3 overflow-auto" style="max-height:80vh;">
+                <?php foreach ($this->offres as $idx => $offre): ?>
+                    <div class="card shadow-sm" data-offre-idx="<?= $idx ?>">
+                        <div class="card-body d-flex justify-content-between">
+                            <div>
+                                <h5 class="card-title text-primary"><?= $this->escape($offre['intitule'] ?? '') ?></h5>
+                                <?php
+                                $desc = $offre['description'] ?? '';
+                                $descTronquee = strlen($desc) > 120 ? substr($desc, 0, 120) . '...' : $desc;
+                                ?>
+                                <p class="card-text small text-muted">
+                                    <?= $this->escape($descTronquee) ?>
+                                    <?php if (strlen($desc) > 120): ?>
+                                        <button type="button" class="btn btn-link p-0" data-bs-toggle="modal"
+                                            data-bs-target="#descModal" data-offre-idx="<?= $idx ?>">
+                                            Voir plus
+                                        </button>
+                                    <?php endif; ?>
+                                </p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span
+                                        class="badge bg-info"><?= $this->escape($offre['entreprise']['nom'] ?? 'Entreprise inconnue') ?></span>
+                                    <span
+                                        class="badge bg-secondary"><?= $this->escape($offre['lieuTravail']['libelle'] ?? 'Lieu inconnu') ?></span>
+                                    <span
+                                        class="badge bg-success"><?= $this->escape($offre['typeContrat'] ?? 'Contrat N/A') ?></span>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-2">
+                                <a href="<?= $this->escape($offre['origineOffre']['urlOrigine'] ?? '#') ?>" target="_blank"
+                                    class="btn btn-outline-primary btn-sm">
+                                    Voir
+                                </a>
+                                <button type="button" class="btn btn-success btn-sm btn-enregistrer"
+                                    data-id="<?= $offre['id'] ?? '' ?>"
+                                    data-intitule="<?= htmlspecialchars($offre['intitule'] ?? '') ?>"
+                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>">
+                                    Enregistrer
+                                </button>
+                                <!-- Ajoute un bouton "Voir sur la carte" pour chaque offre -->
+                                <?php
+                                $hasCoords = !empty($offre['lieuTravail']['latitude']) && !empty($offre['lieuTravail']['longitude']);
+                                ?>
+                                <button type="button"
+                                    class="btn btn-primary btn-sm btn-voir-carte <?= $hasCoords ? '' : 'disabled' ?>"
+                                    <?= $hasCoords ? "data-offre-idx=\"$idx\"" : '' ?>>
+                                    Voir sur la carte
+                                </button>
+
+
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php else: ?>
+            <div class="alert alert-info">Aucune offre trouvée.</div>
+        <?php endif; ?>
+
+        <?php
+        $currentPage = $this->page;
+        $params = $this->params;
+        $perPage = $this->perPage;
+        $offresCount = count($this->offres ?? []);
+
+        // On considère qu'il y a une page suivante uniquement si la page actuelle est pleine
+        $hasNextPage = $offresCount === $perPage;
+
+        // Taille de la fenêtre autour de la page actuelle
+        $window = 2;
+
+        // Pages à afficher
+        $pages = [];
+        for ($i = max(0, $currentPage - $window); $i <= $currentPage + $window; $i++) {
+            // Si c'est la page suivante mais qu'il n'y a pas de résultats, on ne l'affiche pas
+            if ($i === $currentPage + 1 && !$hasNextPage) break;
+            $pages[] = $i;
+        }
+        ?>
+
+        <nav aria-label="Pagination">
+            <ul class="pagination">
+                <!-- Previous -->
+                <li class="page-item <?= ($currentPage <= 0) ? 'disabled' : '' ?>">
+                    <a class="page-link"
+                        href="<?= ($currentPage > 0) ? '?' . http_build_query(array_merge($params, ['page' => $currentPage - 1])) : '#' ?>">
+                        << </a>
+                </li>
+
+                <!-- Pages -->
+                <?php foreach ($pages as $i): ?>
+                    <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>"
+                        <?= ($i === $currentPage) ? 'aria-current="page"' : '' ?>>
+                        <a class="page-link"
+                            href="<?= ($i === $currentPage) ? '#' : '?' . http_build_query(array_merge($params, ['page' => $i])) ?>">
+                            <?= $i + 1 ?>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+
+                <!-- Next -->
+                <li class="page-item <?= !$hasNextPage ? 'disabled' : '' ?>">
+                    <a class="page-link"
+                        href="<?= $hasNextPage ? '?' . http_build_query(array_merge($params, ['page' => $currentPage + 1])) : '#' ?>">>></a>
+                </li>
+            </ul>
+        </nav>
+
+
+
+
+        <!-- Pagination sans numéro de page + ajuster la variable hasNextPage dans le controller-->
+        <!-- <nav aria-label="Pagination">
+    <ul class="pagination">
+        <li class="page-item <?= ($this->page <= 0) ? 'disabled' : '' ?>">
+            <a class="page-link"
+                href="?<?= http_build_query(array_merge($this->params, ['page' => $this->page - 1])) ?>">
+                ← Précédent
+            </a>
+        </li>
+
+        <li class="page-item <?= (!$this->hasNextPage) ? 'disabled' : '' ?>">
+            <a class="page-link"
+                href="?<?= http_build_query(array_merge($this->params, ['page' => $this->page + 1])) ?>">
+                Suivant →
+            </a>
+        </li>
+    </ul>
+</nav> -->
+
+
+    </div>
+
+    <!-- Carte -->
+    <div class="col-md-9">
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div id="map" class="border rounded" style="height:80vh;"></div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<?php else: ?>
-<p>Aucune offre trouvée.</p>
-<?php endif; ?>
+<!-- Modal Bootstrap modernisé -->
+<div class="modal fade" id="descModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Détails de l'offre</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-tabs" id="descTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="infos-tab" data-bs-toggle="tab" data-bs-target="#infos"
+                            type="button" role="tab">Infos</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="description-tab" data-bs-toggle="tab" data-bs-target="#description"
+                            type="button" role="tab">Description</button>
+                    </li>
+                </ul>
+                <div class="tab-content pt-3">
+                    <div class="tab-pane fade show active" id="infos" role="tabpanel"></div>
+                    <div class="tab-pane fade" id="description" role="tabpanel"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
-console.log(offres);
+    const offresData = <?= json_encode($this->offres ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log('nombre offres reçus : ', offresData);
+
+
+        const map = L.map("map").setView([46.5, 2.5], 6);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap",
+            maxZoom: 18
+        }).addTo(map);
+
+        const markerNormal = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+        const markerActive = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684906.png',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+
+        const markers = L.markerClusterGroup();
+        const markerMap = {}; // idx d'offre => marker
+
+        offresData.forEach((offre, idx) => {
+            if (offre.lieuTravail?.latitude && offre.lieuTravail?.longitude) {
+                const marker = L.marker([offre.lieuTravail.latitude, offre.lieuTravail.longitude], {
+                    icon: markerNormal
+                }).bindPopup(`
+                <strong>${offre.intitule || 'Sans titre'}</strong><br>
+                ${offre.entreprise?.nom || 'Entreprise inconnue'}<br>
+                ${offre.lieuTravail?.libelle || ''}<br>
+                <a href="${offre.origineOffre?.urlOrigine || '#'}" target="_blank">Voir l'offre</a>
+            `);
+                markers.addLayer(marker);
+                markerMap[idx] = marker;
+            }
+        });
+
+        map.addLayer(markers);
+        if (markers.getLayers().length) map.fitBounds(markers.getBounds());
+
+        // Bouton "Voir sur la carte"
+        document.querySelectorAll('.btn-voir-carte').forEach(btn => {
+            const idx = btn.getAttribute('data-offre-idx');
+            const marker = markerMap[idx];
+
+            // Si pas de marker, on désactive le bouton
+            if (!marker) {
+                btn.classList.add('disabled');
+                btn.setAttribute('title', 'Localisation indisponible');
+                return;
+            }
+
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('disabled')) return;
+
+                // Zoom sur le marker même s'il est dans un cluster
+                markers.zoomToShowLayer(marker, () => {
+                    marker.setIcon(markerActive);
+                    marker.openPopup();
+
+                    // Revenir à l'icône normale après 2 secondes (optionnel)
+                    setTimeout(() => {
+                        marker.setIcon(markerNormal);
+                        marker.closePopup();
+                    }, 2000);
+                });
+            });
+        });
+
+
+        // Projet → remplir automatiquement les champs
+        const selectProjet = document.getElementById('selectProjet');
+        if (selectProjet) {
+            selectProjet.addEventListener('change', function() {
+                if (this.value) {
+                    try {
+                        const data = JSON.parse(this.value);
+                        if (data.metier) {
+                            document.getElementById('motsCles').value = data.metier;
+                        }
+                        if (data.codeInsee) {
+                            document.getElementById('commune').value = data.codeInsee;
+                        }
+                    } catch (e) {
+                        console.error("Erreur JSON projet :", e);
+                    }
+                }
+            });
+        }
+
+
+        // Injection contenu modal reste inchangée
+        const descModal = document.getElementById('descModal');
+        descModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const idx = button.getAttribute('data-offre-idx');
+            const offre = offresData[idx];
+            if (!offre) return;
+
+            document.querySelector('#infos').innerHTML = `
+            <h5>${offre.intitule || 'Sans intitulé'}</h5>
+            <p><strong>Entreprise :</strong> ${offre.entreprise?.nom || 'N/A'}</p>
+            <p><strong>Lieu :</strong> ${offre.lieuTravail?.libelle || 'N/A'}</p>
+            <p><strong>Type de contrat :</strong> ${offre.typeContrat || 'N/A'}</p>
+            <p><strong>Expérience :</strong> ${offre.experience || 'N/A'} |
+            <strong>Qualification :</strong> ${offre.qualification || 'N/A'}</p>
+            <p><strong>Publié :</strong> ${offre.dateCreation ? new Date(offre.dateCreation).toLocaleDateString('fr-FR') : 'N/A'} |
+            <strong>Actualisé :</strong> ${offre.dateActualisation ? new Date(offre.dateActualisation).toLocaleDateString('fr-FR') : 'N/A'}</p>
+        `;
+
+            document.querySelector('#description').innerHTML = `
+            <p>${offre.description || 'Pas de description'}</p>
+            <a href="${offre.origineOffre?.urlOrigine || '#'}" target="_blank" class="btn btn-primary btn-sm">Voir l'offre originale</a>
+        `;
+        });
+    });
+
+    /*
+        mettre une icone sur la commu
+    ne de selection ?
+    si je clique sur voir la carte, je pourrais faire l'inverse
+    ameliorer l'interface 
+
+    - ajouter le nombre d'offres au-dessus de la pagination + le nombre d'offr
+        */
 </script>

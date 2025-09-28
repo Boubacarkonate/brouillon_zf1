@@ -8,8 +8,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bootstrap demo</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
 </head>
 
 <body>
@@ -38,6 +41,11 @@
                             href="<?php echo $this->url(array('controller' => 'produit', 'action' => 'ajout')); ?>">Nouveau
                             produit</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link"
+                            href="<?php echo $this->url(array('controller' => 'produit', 'action' => 'stockparproduit')); ?>">Stock
+                            actuelle</a>
+                    </li>
                     <?php if ($auth->hasIdentity()): ?>
                         <li class="nav-item">
                             <a class="nav-link"
@@ -63,3 +71,17 @@
 </body>
 
 </html>
+
+<!-- <?php foreach ($this->filtresDynamiques as $filtreNom => $valeurs): ?>
+    <div class="col-md-3">
+        <select name="<?= $this->escape($filtreNom) ?>" class="form-select">
+            <option value="">Tous <?= $this->escape($filtreNom) ?></option>
+            <?php foreach ($valeurs as $code => $libelle): ?>
+                <option value="<?= $this->escape($code) ?>"
+                    <?= ($this->escape($this->params[$filtreNom] ?? '') === $code) ? 'selected' : '' ?>>
+                    <?= $this->escape($libelle) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+<?php endforeach; ?> -->

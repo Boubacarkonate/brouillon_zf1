@@ -20,6 +20,11 @@ class Application_Model_Francetravail
     protected $tokenFicheMetierExpiresAt;
     protected $accessTokenCompetence;
 
+    // === Instarlink (Match via Soft Skills) ===
+    // protected $instarlinkApiId     = 'TON_API_ID';
+    // protected $instarlinkApiKey    = 'TON_API_KEY';
+    // protected $instarlinkBaseUrl   = 'https://dev.instarlink.com/api/v1/professions/job_skills';
+
 
 
 
@@ -93,6 +98,7 @@ class Application_Model_Francetravail
             'departement',
             'distance',
             'codeROME',
+            'commune',
             'accesTravailleurHandicape',
             'origineOffre',
             'natureContrat',
@@ -110,8 +116,16 @@ class Application_Model_Francetravail
             'minPublicationDate',
             'maxPublicationDate',
             'minModificationDate',
-            'maxModificationDate'
+            'maxModificationDate',
+            'agregation',
+            'niveauFormations',
+            'secteursActivites'
         ];
+
+        // On ajoute automatiquement l'agrégation pour récupérer typeContrat
+        if (empty($params['agregation'])) {
+            $params['agregation'] = ['typeContrat'];
+        }
 
         foreach ($allowedParams as $key) {
             if (!empty($params[$key])) {
@@ -152,8 +166,62 @@ class Application_Model_Francetravail
 
         $data = json_decode($response->getBody(), true);
         error_log("[FranceTravail] Réponse API reçue : " . json_encode($data));
+
+
+        // Récupération automatique des valeurs valides typeContrat
+        $typeContratValues = [];
+        if (!empty($data['filtresPossibles'])) {
+            foreach ($data['filtresPossibles'] as $filtre) {
+                if ($filtre['filtre'] === 'typeContrat') {
+                    foreach ($filtre['agregation'] as $val) {
+                        $typeContratValues[] = $val['valeurPossible'];
+                    }
+                }
+            }
+        }
+        $data['typeContratValues'] = $typeContratValues;
+
         return $data;
     }
+
+
+    public function getReferentiel(string $type): array
+    {
+        $token = $this->getAccessToken(); // ou récupère ton token depuis le modèle
+        $url = "https://api.francetravail.io/partenaire/offresdemploi/v2/referentiel/$type";
+
+        $client = new Zend_Http_Client($url);
+        $client->setMethod(Zend_Http_Client::GET);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json'
+        ]);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl',
+            'curloptions' => [
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
+            ]
+        ]);
+
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            error_log("[FranceTravail] Erreur API référentiel $type : " . $response->getBody());
+            return [];
+        }
+
+        $data = json_decode($response->getBody(), true);
+        // transformer en tableau code => libellé
+        $referentiel = [];
+        foreach ($data as $item) {
+            $referentiel[$item['code']] = $item['libelle'] ?? $item['code'];
+        }
+
+        return $referentiel;
+    }
+
 
     public function getAccessTokenCompetence()
     {
@@ -337,5 +405,44 @@ class Application_Model_Francetravail
         $data = json_decode($response->getBody(), true);
         error_log("[FranceTravail] Réponse fiche-metier : " . substr($response->getBody(), 0, 200) . '...');
         return $data;
+    }
+
+    protected function getAccessTokenSkills()
+    {
+        $client = new Zend_Http_Client('https://entreprise.francetravail.io/partenaire/oauth2/token');
+        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
+        $client->setParameterPost([
+            'grant_type'    => 'client_credentials',
+            'client_id'     => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'scope' => 'api_matchviasoftskillsv1'
+        ]);
+
+        $response = $client->request('POST');
+        if ($response->isSuccessful()) {
+            $data = json_decode($response->getBody(), true);
+            return $data['access_token'] ?? null;
+        }
+
+        throw new Exception("Impossible d'obtenir le token OAuth : " . $response->getStatus() . ' ' . $response->getMessage());
+    }
+
+    public function fetchSoftSkillsByRome($codeRome)
+    {
+        $token = $this->getAccessTokenSkills();
+
+        $client = new Zend_Http_Client('https://api.francetravail.io/partenaire/matchviasoftskills/v1/professions/job_skills');
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Content-Type'  => 'application/json'
+        ]);
+        $client->setParameterGet(['code' => $codeRome]);
+
+        $response = $client->request('POST');
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API France Travail : " . $response->getStatus() . ' ' . $response->getMessage());
+        }
+
+        return json_decode($response->getBody(), true);
     }
 }

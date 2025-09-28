@@ -1,0 +1,19 @@
+<h2>Test API Soft Skills (Instarlink)</h2>
+
+<form method="get" action="">
+    <label for="code">Code ROME :</label>
+    <input type="text" name="code" id="code" value="<?php echo $this->escape($this->codeRome); ?>"
+        placeholder="ex : M1805" />
+    <button type="submit">Rechercher</button>
+</form>
+
+<?php if (isset($this->error)): ?>
+<div style="color:red;">
+    <strong>Erreur :</strong> <?php echo $this->escape($this->error); ?>
+</div>
+<?php endif; ?>
+
+<?php if (isset($this->softSkills)): ?>
+<h3>Résultats :</h3>
+<pre><?php echo json_encode($this->softSkills, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE); ?></pre>
+<?php endif; ?>
