@@ -112,4 +112,150 @@ class ProduitController extends Zend_Controller_Action
         // Redirection vers la liste des produits
         return $this->_helper->redirector('listeproduit', 'produit');
     }
+
+    public function moyenneprixproduitsAction()
+    {
+
+        /*disableLayout() : ZF1 utilise par défaut un layout (header, footer, etc.) pour toutes les pages. Ici, on le désactive, car pour un appel AJAX, on ne veut que la donnée brute.
+setNoRender(true) : empêche ZF1 de chercher et de rendre une vue associée à l’action (moyenne-prix-produits.phtml).
+En combinant les deux, la réponse sera uniquement ce que tu envoies dans le corps HTTP, pas de HTML autour. */
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $moyenne = $produitModel->calculeMoyenne();
+
+        // Retourne la moyenne en JSON
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode(['moyennePrixProduit' => $moyenne]));
+    }
+
+    public function prixmaxAction()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+        $produitModel = new Application_Model_Produit();
+
+        $prixMax = $produitModel->prixMax();
+
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode(['prixMaximun' => $prixMax]));
+    }
+
+    public function prixminAction()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+        $produitModel = new Application_Model_Produit();
+
+        $prixMin = $produitModel->prixMin();
+
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode(['prixMinimun' => $prixMin])); // pour recuperer une valeur
+    }
+
+    public function stockparproduitAction()
+    {
+        $produitModel = new Application_Model_Produit();
+
+        $stock = $produitModel->totalStockByProduit();
+        $this->view->stockproduit = $stock;
+    }
+
+    public function classementprixproduitAction()
+    {
+        $produitModel = new Application_Model_Produit();
+        $limit = $this->getParam('nombre', 0);
+        $prixClasse = $produitModel->classementProduitsChers($limit);
+        $this->view->classement = $prixClasse;
+    }
+
+    public function rechercheproduitAction()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $lettre = $this->_getParam('lettre', ''); // vide par défaut si rien n’est tapé
+
+        $resultats = $produitModel->motRecherche($lettre);
+
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode($resultats)); // renvoie directement le tableau de produits
+    }
+
+    public function filtreprixAction()
+    {
+
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $prix1 = $this->_getParam('prix1', '0');
+        $prix2 = $this->_getParam('prix2', '0');
+
+        $filtrePrix = $produitModel->filtreEntreDeuxValeurs($prix1, $prix2);
+
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode($filtrePrix)); // renvoie directement le tableau de produits pour recuperer un objet en ajax
+
+    }
+
+    public function inferieur50Action()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $filtrePrix = $produitModel->moins50Euros();
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode($filtrePrix)); // renvoie directement le tableau de produits pour recuperer un objet en ajax
+
+
+    }
+    public function plus100Action()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $filtrePrix = $produitModel->plus100Euros();
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode($filtrePrix)); // renvoie directement le tableau de produits pour recuperer un objet en ajax
+
+
+    }
+    public function prixcroissantAction()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $filtrePrix = $produitModel->croissant();
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode($filtrePrix)); // renvoie directement le tableau de produits pour recuperer un objet en ajax
+
+
+    }
+    public function prixdecroissantAction()
+    {
+        $this->_helper->layout()->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $produitModel = new Application_Model_Produit();
+        $filtrePrix = $produitModel->decroissant();
+        $this->getResponse()
+            ->setHeader('Content-Type', 'application/json')
+            ->setBody(json_encode($filtrePrix)); // renvoie directement le tableau de produits pour recuperer un objet en ajax
+
+
+    }
 }

@@ -1,0 +1,14 @@
+<form method="get">
+    <input type="number" name="nombre">
+    <button type="submit">Valider</button>
+</form>
+
+<ul>
+    <?php if (!empty($this->classement)) : ?>
+        <?php foreach ($this->classement as $produit) : ?>
+            <li><?= $this->escape($produit['nom']) ?> => <?= $this->escape($produit['prix']) ?> €</li>
+        <?php endforeach ?>
+    <?php else: ?>
+        <li>Aucun produit trouvé</li>
+    <?php endif ?>
+</ul>

@@ -1,0 +1,32 @@
+<h2 class="mb-4">Stocks des Produits</h2>
+
+<?php if (!empty($this->stockproduit)) : ?>
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Nom du produit</th>
+                    <th>Stock disponible</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($this->stockproduit as $stock) : ?>
+                    <tr>
+                        <td><?= $this->escape($stock['nom']) ?></td>
+                        <td>
+                            <?php if ($stock['stock'] > 0) : ?>
+                                <span class="badge bg-success"><?= $this->escape($stock['stock']) ?></span>
+                            <?php else : ?>
+                                <span class="badge bg-danger">Rupture</span>
+                            <?php endif ?>
+                        </td>
+                    </tr>
+                <?php endforeach ?>
+            </tbody>
+        </table>
+    </div>
+<?php else : ?>
+    <div class="alert alert-warning">
+        Aucun stock trouvé !
+    </div>
+<?php endif ?>

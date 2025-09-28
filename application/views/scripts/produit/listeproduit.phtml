@@ -1,32 +1,302 @@
-<?php if (!empty($this->messages)) : ?>
-    <div class="alert alert-success">
-        <?php foreach ($this->messages as $msg) : ?>
-            <?= $this->escape($msg) ?><br>
-        <?php endforeach; ?>
-    </div>
-<?php endif; ?>
-
-<?php if (!empty($this->liste)) : ?>
+<div class="container mt-4">
     <div class="row">
-        <?php foreach ($this->liste as $produit) : ?>
-            <div class="col-md-4 mb-4">
-                <div class="card">
-                    <img src="<?= $produit['image'] ?? 'placeholder.png' ?>" class="card-img-top"
-                        alt="<?= $this->escape($produit['nom']); ?>">
-                    <div class="card-body">
-                        <h5 class="card-title"><?= $this->escape($produit['nom']) ?></h5>
-                        <p class="card-text"><?= $this->escape($produit['description']) ?></p>
-                        <p class="card-text">Prix : <?= $this->escape($produit['prix']) ?> €</p>
-                        <p class="card-text">Stock : <?= $this->escape($produit['stock']) ?></p>
-                        <a href="<?= $this->url(array('controller' => 'produit', 'action' => 'unproduit', 'id' => $produit['id'])) ?>"
-                            class="btn btn-primary">
-                            Voir le produit
-                        </a>
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="card p-3 mb-4">
+                <h5>Filtres</h5>
+                <!-- Filtre par prix -->
+                <form id="fitre2prix" class="mb-3">
+                    <label for="val1">Prix min :</label>
+                    <input type="number" id="val1" name="prix1" class="form-control mb-2">
+                    <label for="val2">Prix max :</label>
+                    <input type="number" id="val2" name="prix2" class="form-control mb-2">
+                    <button type="submit" class="btn btn-primary w-100">Filtrer</button>
+                </form>
+
+                <!-- Boutons rapides -->
+                <div class="mb-3">
+                    <button id="50€" class="btn btn-warning w-100 mb-2">-50€</button>
+                    <button id="100€" class="btn btn-success w-100 mb-2">+100€</button>
+                    <div class="d-flex">
+                        <button id="prixCroissant">Du mois chers au plus chers</button>
+                        <button id="prixDecroissant">Du plus chers au moins chers</button>
                     </div>
+                    <button id="reset" class="btn btn-secondary w-100">Réinitialiser</button>
+                </div>
+
+                <!-- Recherche par nom -->
+                <div class="mt-3">
+                    <label for="lettre">Recherche :</label>
+                    <input type="text" name="lettre" id="lettre" placeholder="Tapez un mot" class="form-control">
                 </div>
             </div>
-        <?php endforeach; ?>
+        </div>
+
+        <!-- Contenu principal : produits -->
+        <div class="col-md-9">
+            <?php if (!empty($this->messages)) : ?>
+                <div class="alert alert-success">
+                    <?php foreach ($this->messages as $msg) : ?>
+                        <?= $this->escape($msg) ?><br>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <div id="liste-produits" class="row">
+                <?php if (!empty($this->liste)) : ?>
+                    <?php foreach ($this->liste as $produit) : ?>
+                        <div class="col-md-4 mb-4 produit-card" data-nom1="<?= strtolower($this->escape($produit['nom'])) ?>"
+                            data-id="<?= $this->escape($produit['id']) ?>">
+                            <div class="card h-100 shadow-sm">
+                                <img src="<?= $produit['image'] ?? 'placeholder.png' ?>" class="card-img-top"
+                                    alt="<?= $this->escape($produit['nom']); ?>">
+                                <div class="card-body d-flex flex-column">
+                                    <h5 class="card-title"><?= $this->escape($produit['nom']) ?></h5>
+                                    <p class="card-text"><?= $this->escape($produit['description']) ?></p>
+                                    <p class="card-text mt-auto">Prix : <?= $this->escape($produit['prix']) ?> €</p>
+                                    <p class="card-text">Stock : <?= $this->escape($produit['stock']) ?></p>
+                                    <a href="<?= $this->url(['controller' => 'produit', 'action' => 'unproduit', 'id' => $produit['id']]) ?>"
+                                        class="btn btn-primary mt-2">Voir le produit</a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p>Aucun produit trouvé.</p>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
-<?php else: ?>
-    <p>Aucun produit trouvé.</p>
-<?php endif; ?>
+</div>
+
+<script>
+    $.ajax({
+        url: '/zf1/public/produit/moyenneprixproduits', // adapte l'URL
+        type: 'GET', // ou POST selon ton besoin
+        dataType: 'json',
+        success: function(data) {
+            console.log("Moyenne des prix : " + data.moyennePrixProduit);
+            // tu peux aussi l'afficher dans le DOM
+            $('#moyennePrix').text(data.moyennePrixProduit);
+        },
+        error: function(xhr, status, error) {
+            console.error("Erreur AJAX : " + error);
+        }
+    });
+
+    $.ajax({
+        url: '/zf1/public/produit/prixmax',
+        type: 'GET',
+        dataType: 'json',
+        success: (data) => {
+            console.log(data);
+
+            $('#prixMax').click(() => {
+                $('#resultMax').text(data.prixMaximun + '€')
+            });
+
+        }
+    });
+
+    $.ajax({
+        url: '/zf1/public/produit/prixmin',
+        type: 'GET',
+        dataType: 'json',
+        success: (dataMin) => {
+            console.log(dataMin);
+
+            $('#prixMin').click(() => {
+                $('#resultMin').text(dataMin.prixMinimun + '€')
+            });
+
+        }
+    })
+
+
+    // FILTRE COTE CLIENT
+
+    $('#lettre').on('input', function() {
+        let recherche = $(this).val().toLowerCase(); // tout en minuscules pour comparaison
+
+        $('.produit-card:visible').each(function() {
+            let nomProduit = $(this).data('nom1'); // récupère le nom du produit
+
+            if (nomProduit.includes(
+                    recherche)) { //si le nom du produit inclut la lettre actuelle alors....
+                $(this).show(); // affiche si correspond
+            } else {
+                $(this).hide(); // masque sinon
+            }
+        });
+    });
+
+
+    // FILTRE COTE SERVER
+    // $('#lettre').on('input', function() {
+    //     let mot = $(this).val()
+    //     console.log($('#liste-produits'));
+    // })
+    // $.getJSON('/zf1/public/produit/rechercheproduit', {
+    //     lettre: mot
+    // }, function(data) {
+    //     let html = '';
+
+    //     if (data.length > 0) {
+    //         data.forEach(produit => {
+    //             html += `<li>${produit.nom} => ${produit.prix} €</li>`;
+    //         });
+    //     } else {
+    //         html = '<li>Aucun produit trouvé</li>';
+    //     }
+
+    //     $('#resultRecherche').html(html);
+    // }).fail(function(xhr, status, error) {
+    //     console.error("Erreur AJAX recherche :", error);
+    // });
+
+    $("#fitre2prix").on('submit', (e) => {
+        e.preventDefault();
+
+        let prix1 = $('#val1').val();
+        let prix2 = $('#val2').val();
+
+        $.ajax({
+            url: '/zf1/public/produit/filtreprix',
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                prix1,
+                prix2
+            },
+            success: (data) => {
+                console.log(data);
+
+                // Cache tout
+                $('.produit-card').hide();
+
+                // Affiche seulement les produits filtrés
+                data.forEach((element) => {
+                    $(`.produit-card[data-id="${element.id}"]`).show();
+                });
+
+                if (data.length === 0) {
+                    console.log('non pas trouvé');
+                }
+            },
+            error: (xhr, status, error) => {
+                console.error("Erreur AJAX filtre :", error);
+            }
+        })
+
+    })
+
+
+    $.ajax({
+        url: '/zf1/public/produit/inferieur50',
+        type: 'GET',
+        dataType: 'json',
+        success: (prod) => {
+            console.log('produits -50€ : ', prod);
+            $('#50€').click(() => {
+
+
+                // Cache tout
+                $('.produit-card').hide();
+
+                // Affiche seulement les produits filtrés
+                prod.forEach((element) => {
+                    $(`.produit-card[data-id="${element.id}"]`).show();
+                });
+
+                if (prod.length === 0) {
+                    console.log('non pas trouvé');
+                }
+            })
+
+        },
+        error: (xhr, status, error) => {
+            console.error("Erreur AJAX filtre :", error);
+        }
+    })
+
+
+    $.ajax({
+        url: '/zf1/public/produit/plus100',
+        type: 'GET',
+        dataType: 'json',
+        success: (prod) => {
+            console.log('produits +100€ : ', prod);
+            $('#100€').click(() => {
+
+
+                // Cache tout
+                $('.produit-card').hide();
+
+                // Affiche seulement les produits filtrés
+                prod.forEach((element) => {
+                    $(`.produit-card[data-id="${element.id}"]`).show();
+                });
+
+                if (prod.length === 0) {
+                    console.log('non pas trouvé');
+                }
+            })
+            // res()
+        },
+        error: (xhr, status, error) => {
+            console.error("Erreur AJAX filtre :", error);
+        }
+    })
+
+    $.ajax({
+        url: '/zf1/public/produit/prixcroissant',
+        type: 'GET',
+        dataType: 'json',
+        success: (prod) => {
+
+            $('#prixCroissant').click(() => {
+                // Cache toutes les cartes
+                $('.produit-card').hide();
+
+                // Affiche seulement les produits dans l'ordre reçu par Ajax
+                prod.forEach((element) => {
+                    $(`.produit-card[data-id="${element.id}"]`).show();
+                });
+
+                console.log('produits croissants : ', prod);
+            });
+
+        },
+        error: (xhr, status, error) => {
+            console.error("Erreur AJAX :", error);
+        }
+    });
+
+
+
+    $('#reset').click(() => {
+        $('.produit-card').show(); // montre toutes les cartes
+        console.log('Réinitialisation effectuée');
+    });
+    // REINITIALISATION EN JS
+    // document.getElementById('reset').addEventListener('click', function() {
+    //     // Récupère toutes les cartes produits
+    //     const cartes = document.querySelectorAll('.produit-card');
+
+    //     // Affiche chaque carte
+    //     cartes.forEach(card => {
+    //         card.style.display = 'block'; // ou '' si tu veux rétablir le style par défaut
+    //     });
+
+    //     console.log('Réinitialisation effectuée');
+    // });
+</script>
+<div>Moyenne des prix : <span id="moyennePrix"></span></div>
+<div>
+    <button id="prixMax">prix maximun</button>
+    <p id="resultMax"></p>
+</div>
+<div>
+    <button id="prixMin">prix minimun</button>
+    <p id="resultMin"></p>
+</div>
