@@ -1,0 +1,211 @@
+<?php
+// variables attendues depuis controller:
+// $this->services (ou $this->services['items']) — dans notre controller on a $this->services
+$services = $this->services ?? [];
+$total = $this->total ?? 0;
+$lat = $this->lat ?? null;
+$lon = $this->lon ?? null;
+$radius = $this->radius ?? 10;
+$theme = $this->theme ?? '';
+$q = $this->q ?? '';
+?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<h1>Services d'accompagnement</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form id="searchForm" method="get" class="d-flex gap-2">
+            <input type="text" name="q" placeholder="Recherche (mot-clé)" value="<?= $this->escape($q) ?>"
+                class="form-control" style="max-width:220px;">
+            <select name="theme" class="form-select" style="max-width:180px;">
+                <option value="">Tous thèmes</option>
+                <option value="mobilite" <?= $theme === 'mobilite' ? 'selected' : '' ?>>Mobilité</option>
+                <option value="logement" <?= $theme === 'logement' ? 'selected' : '' ?>>Logement</option>
+                <option value="numerique" <?= $theme === 'numerique' ? 'selected' : '' ?>>Numérique</option>
+                <option value="handicap" <?= $theme === 'handicap' ? 'selected' : '' ?>>Handicap</option>
+            </select>
+
+            <input type="number" name="radius" min="1" max="200" value="<?= (int)$radius ?>" class="form-control"
+                style="max-width:120px;">
+            <input type="text" id="lat" name="lat" placeholder="lat" value="<?= $this->escape($lat) ?>"
+                class="form-control" style="max-width:140px;">
+            <input type="text" id="lon" name="lon" placeholder="lon" value="<?= $this->escape($lon) ?>"
+                class="form-control" style="max-width:140px;">
+            <button class="btn btn-primary" type="submit">Rechercher</button>
+            <button id="useMyLocation" class="btn btn-outline-secondary" type="button">Ma position</button>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="mb-2">Résultats : <?= (int)$total ?></div>
+        <div id="list" style="max-height:75vh; overflow:auto;">
+            <?php if (empty($services)): ?>
+                <div class="alert alert-info">Aucun service trouvé</div>
+            <?php else: ?>
+                <?php foreach ($services as $s): ?>
+                    <div class="card mb-2 service-item" data-id="<?= $this->escape($s['id']) ?>">
+                        <div class="card-body">
+                            <h5 class="card-title"><?= $this->escape($s['label'] ?? 'Sans nom') ?></h5>
+                            <p class="small text-muted"><?= $this->escape($s['theme'] ?? '') ?></p>
+                            <p class="small"><?= $this->escape($s['address'] ?? '') ?></p>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary btn-detail"
+                                    data-id="<?= $this->escape($s['id']) ?>">Détails</button>
+                                <button class="btn btn-sm btn-success btn-attach" data-id="<?= $this->escape($s['id']) ?>"
+                                    data-label="<?= htmlspecialchars($s['label']) ?>">Rattacher</button>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+        <!-- pagination simple -->
+        <div class="mt-2">
+            <?php if ($this->page > 0): ?>
+                <a class="btn btn-sm btn-outline-secondary"
+                    href="<?= '?' . http_build_query(array_merge($_GET, ['page' => max(0, $this->page - 1)])) ?>">Précédent</a>
+            <?php endif; ?>
+            <?php if (count($services) === $this->perPage): ?>
+                <a class="btn btn-sm btn-outline-secondary"
+                    href="<?= '?' . http_build_query(array_merge($_GET, ['page' => $this->page + 1])) ?>">Suivant</a>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div id="map" style="height:80vh;"></div>
+    </div>
+</div>
+
+<!-- Modal détail -->
+<div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails du service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal">X</button>
+            </div>
+            <div class="modal-body" id="detailBody">
+                Chargement...
+            </div>
+            <div class="modal-footer">
+                <button id="attachFromModal" class="btn btn-success">Rattacher</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const services = <?= json_encode($services, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        const map = L.map('map').setView([<?= $this->latitude ?? 48.8566 ?>, <?= $this->longitude ?? 2.3522 ?>], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        const markers = L.markerClusterGroup();
+        const idxToMarker = {};
+
+        services.forEach((s, idx) => {
+            const lat = parseFloat(s.lat);
+            const lon = parseFloat(s.lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+                const marker = L.marker([lat, lon]);
+                marker.bindPopup(`<strong>${escapeHtml(s.label||'')}</strong><br>${escapeHtml(s.address||'')}`);
+                markers.addLayer(marker);
+                idxToMarker[s.id] = marker;
+            }
+        });
+        map.addLayer(markers);
+        if (markers.getLayers().length) map.fitBounds(markers.getBounds());
+
+        // details
+        $(document).on('click', '.btn-detail', function() {
+            const id = $(this).data('id');
+            $('#detailBody').text('Chargement...');
+            $('#detailModal').modal('show');
+            $.getJSON('<?= $this->baseUrl() ?>/francetravailnew/service-detail', {
+                id: id
+            }, function(resp) {
+                if (resp.success) {
+                    const d = resp.data;
+                    let html = `<h4>${escapeHtml(d.label||d.name||'')}</h4>`;
+                    html += `<p>${escapeHtml(d.description||'')}</p>`;
+                    if (d.address) html += `<p><strong>Adresse:</strong> ${escapeHtml(d.address)}</p>`;
+                    if (d.contact) html +=
+                        `<p><strong>Contact:</strong> ${escapeHtml(JSON.stringify(d.contact))}</p>`;
+                    // stock id & label pour rattacher depuis modal
+                    $('#attachFromModal').data('id', id).data('label', d.label || d.name || '');
+                    $('#detailBody').html(html);
+                } else {
+                    $('#detailBody').text('Erreur: ' + (resp.message || 'inconnue'));
+                }
+            }).fail(function(xhr) {
+                $('#detailBody').text('Erreur appel API');
+            });
+        });
+
+        // attach (rattacher) depuis liste ou modal
+        function attachService(id, label) {
+            const salarieId = window.SALARIE_ID || $('[name="salarie_id"]').val() || null;
+            if (!salarieId) {
+                alert('id salarié manquant');
+                return;
+            }
+            $.post('<?= $this->baseUrl() ?>/francetravailnew/attacher-service', {
+                salarie_id: salarieId,
+                service_id: id,
+                label: label
+            }, function(resp) {
+                if (resp.success) {
+                    alert('Service rattaché');
+                } else {
+                    alert('Erreur: ' + (resp.message || 'erreur'));
+                }
+            }, 'json');
+        }
+
+        $(document).on('click', '.btn-attach', function() {
+            const id = $(this).data('id');
+            const label = $(this).data('label');
+            attachService(id, label);
+        });
+        $('#attachFromModal').on('click', function() {
+            const id = $(this).data('id');
+            const label = $(this).data('label');
+            attachService(id, label);
+        });
+
+        // My location
+        $('#useMyLocation').on('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    $('[name="lat"]').val(pos.coords.latitude);
+                    $('[name="lon"]').val(pos.coords.longitude);
+                }, function() {
+                    alert('Impossible de récupérer la position');
+                });
+            } else alert('Géolocalisation non supportée');
+        });
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            return String(s).replace(/[&<>"'\/]/g, function(ch) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;',
+                    '/': '&#x2F;'
+                } [ch];
+            });
+        }
+    })();
+</script>

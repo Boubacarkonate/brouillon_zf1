@@ -328,4 +328,73 @@ class FranceTravailnewController extends Zend_Controller_Action
             error_log("[BonneBoiteController] Erreur Bonne Boite : " . $e->getMessage());
         }
     }
+
+    public function servicesAction()
+    {
+        // Params
+        $page     = (int)$this->_getParam('page', 0);
+        $perPage  = (int)$this->_getParam('perPage', 20);
+        $lat      = $this->_getParam('lat', null);
+        $lon      = $this->_getParam('lon', null);
+        $radius   = (int)$this->_getParam('radius', 10); // km
+        $theme    = $this->_getParam('theme', null); // ex. 'mobilite', 'logement', 'handicap', 'numerique'
+        $query    = $this->_getParam('q', null);
+
+        $model = new Application_Model_DataInclusion();
+
+        try {
+            $searchParams = [
+                'page' => $page,
+                'perPage' => $perPage,
+                'lat' => $lat,
+                'lon' => $lon,
+                'radius' => $radius,
+                'theme' => $theme,
+                'q' => $query,
+            ];
+
+            $result = $model->searchServices($searchParams);
+            // $result expected: ['items' => [...], 'total' => int]
+            $this->view->services = $result['items'] ?? [];
+            $this->view->total = $result['total'] ?? count($this->view->services);
+        } catch (Exception $e) {
+            $this->view->services = [];
+            $this->view->total = 0;
+            $this->view->error = "Erreur API Data Inclusion : " . $e->getMessage();
+            error_log("[Services] Erreur recherche services : " . $e->getMessage());
+        }
+
+        // pass filters back
+        $this->view->page = $page;
+        $this->view->perPage = $perPage;
+        $this->view->lat = $lat;
+        $this->view->lon = $lon;
+        $this->view->radius = $radius;
+        $this->view->theme = $theme;
+        $this->view->q = $query;
+    }
+
+    /**
+     * AJAX: retourne le détail d'un service (JSON)
+     * URL: /francetravailnew/service-detail?id=...
+     */
+    public function serviceDetailAction()
+    {
+        $this->_helper->viewRenderer->setNoRender(true);
+        $this->_helper->layout->disableLayout();
+
+        $id = $this->_getParam('id');
+        if (empty($id)) {
+            return $this->_helper->json(['success' => false, 'message' => 'id manquant']);
+        }
+
+        $model = new Application_Model_DataInclusion();
+        try {
+            $detail = $model->getServiceDetail($id);
+            return $this->_helper->json(['success' => true, 'data' => $detail]);
+        } catch (Exception $e) {
+            error_log("[Services] Erreur detail service $id : " . $e->getMessage());
+            return $this->_helper->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
 }
