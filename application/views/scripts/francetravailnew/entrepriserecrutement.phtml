@@ -58,6 +58,9 @@
                                 Haut potentiel: <?= !empty($entreprise['is_high_potential']) ? 'Oui' : 'Non' ?>
                             </p>
                             <p>Siret : <?= $entreprise['siret'] ?></p>
+                            <p class="small text-muted mb-1">
+                                <?= $this->adresse ?>
+                            </p>
 
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-sm btn-primary btn-voir-carte" data-idx="<?= $idx ?>"
