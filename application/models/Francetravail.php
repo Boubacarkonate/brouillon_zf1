@@ -25,6 +25,12 @@ class Application_Model_Francetravail
     protected $accessTokenBonneBoite;
     protected $tokenBonneBoiteExpiresAt;
 
+    protected $apiBaseUrlMarcheTravail   = 'https://api.francetravail.io/partenaire/stats-offres-demandes-emploi';
+    protected $scopeMarcheTravail       = 'offresetdemandesemploi api_stats-offres-demandes-emploiv1';
+    protected $accessTokenMarcheTravail;
+    protected $tokenMarcheTravail;
+    protected $tokenMarcheTravailExpiresAt;
+
 
 
 
@@ -541,5 +547,235 @@ class Application_Model_Francetravail
         }
 
         return json_decode($response->getBody(), true);
+    }
+
+    // ---------------------------
+    // MARCHE EMPLOI LOCAL
+    // ---------------------------
+    public function tokenMarcheTravail()
+    {
+        if ($this->accessTokenMarcheTravail && $this->tokenMarcheTravailExpiresAt && time() < $this->tokenMarcheTravailExpiresAt) {
+            error_log("[FranceTravail] Utilisation du token existant");
+            return $this->accessTokenMarcheTravail;
+        }
+
+        error_log("[FranceTravail - MAtch skills] Demande d'un nouveau token");
+
+        $client = new Zend_Http_Client($this->tokenUrl);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
+        $client->setParameterPost([
+            'grant_type'    => 'client_credentials',
+            'client_id'     => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'scope'         => $this->scopeMarcheTravail
+        ]);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl',
+            'curloptions' => [
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
+            ]
+        ]);
+
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            error_log("[FranceTravail] Erreur Token - La Bonne Boite : " . $response->getBody());
+            throw new Exception("Erreur Token : " . $response->getBody());
+        }
+
+        $data = json_decode($response->getBody(), true);
+        if (empty($data['access_token'])) {
+            error_log("[FranceTravail] Impossible de récupérer le token - La Bonne Boite : " . $response->getBody());
+            throw new Exception("Impossible de récupérer le token - La Bonne Boite : " . $response->getBody());
+        }
+
+        $this->accessTokenMarcheTravail = $data['access_token'];
+
+        if (!empty($data['expires_in'])) {
+            $this->tokenMarcheTravailExpiresAt = time() + (int)$data['expires_in'] - 30;
+        }
+
+        error_log("[FranceTravail] Token récupéré avec succès - La Bonne Boite");
+        return $this->accessTokenMarcheTravail;
+    }
+
+    // public function getAccessTokenMarcheTravail() {
+    //     return $this->tokenMarcheTravail();
+    // }
+
+
+    // --- Gestion du token ---
+    public function getAccessTokenMarcheTravail()
+    {
+        if ($this->accessTokenMarcheTravail && time() < $this->tokenMarcheTravailExpiresAt) {
+            return $this->accessTokenMarcheTravail;
+        }
+
+        $client = new Zend_Http_Client($this->tokenUrl);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
+        $client->setParameterPost([
+            'grant_type' => 'client_credentials',
+            'client_id' => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'scope' => $this->scopeMarcheTravail
+        ]);
+        $client->setConfig(['timeout' => 30]);
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur Token : " . $response->getBody());
+        }
+        $data = json_decode($response->getBody(), true);
+        if (empty($data['access_token'])) {
+            throw new Exception("Impossible de récupérer le token");
+        }
+
+        $this->accessTokenMarcheTravail = $data['access_token'];
+        $this->tokenMarcheTravailExpiresAt = time() + ((int)$data['expires_in'] - 30);
+
+        return $this->accessTokenMarcheTravail;
+    }
+
+    // --- Appel générique API ---
+    protected function callApi($endpoint, $body = null)
+    {
+        $token = $this->getAccessTokenMarcheTravail();
+        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json',
+            'Content-Type'  => 'application/json',
+        ]);
+        $client->setRawData(json_encode($body), 'application/json');
+        $response = $client->request();
+
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API Marché du Travail : " . $response->getBody());
+        }
+
+        return json_decode($response->getBody(), true);
+    }
+
+    // --- Méthodes pour chaque indicateur ---
+
+    public function getDynamiqueEmploi($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-dynamique-emploi', $params);
+    }
+
+    public function getEmbauches($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-embauches', $params);
+    }
+
+    public function getDemandeurs($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-demandeurs', $params);
+    }
+
+    public function getTensionRecrutement($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-perspective-employeur', $params);
+    }
+
+    public function getStatsEmploi($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-offres', $params);
+    }
+
+    // --- Méthode pour récupérer le libellé d'un territoire ---
+    public function getLibelleTerritoire($codeTerritoire)
+    {
+        $referentiel = $this->getReferentielDesIndicateurs('/v1/referentiel/types-territoires');
+        foreach ($referentiel['listeTypesTerritoiresIndicateur'] ?? [] as $territoire) {
+            if ($territoire['codeTerritoire'] == $codeTerritoire) {
+                return $territoire['libelleTerritoire'];
+            }
+        }
+        return $codeTerritoire; // fallback si non trouvé
+    }
+
+    // --- Méthode pour récupérer le libellé d'un code ROME ---
+    public function getLibelleRome($codeRome)
+    {
+        $referentiel = $this->getReferentielDesIndicateurs('/v1/referentiel/romes');
+        foreach ($referentiel['listeRomes'] ?? [] as $rome) {
+            if ($rome['codeRome'] == $codeRome) {
+                return $rome['libelleRome'];
+            }
+        }
+        return $codeRome;
+    }
+
+    // --- Calcul dynamique du ratio DE / offres ---
+    public function calculateRatioDEOffres($demandeurs, $offres)
+    {
+        $nbDE = (int)($demandeurs['valeurPrincipaleNombre'] ?? 0);
+        $nbOffres = (int)($offres['valeurPrincipaleNombre'] ?? 0);
+
+        if ($nbOffres === 0) {
+            return "N/A"; // plutôt que null pour la vue
+        }
+
+        return round($nbDE / $nbOffres, 2);
+    }
+
+
+    // --- Méthode pour récupérer les métiers principaux d’un territoire ---
+    public function getTopMetiers($codeTerritoire, $limit = 5)
+    {
+        $params = [
+            "codeTypeTerritoire" => "DEP",
+            "codeTerritoire"     => $codeTerritoire,
+            "codeTypeActivite"   => "MOYENNE",
+            "codeActivite"       => "MOYENNE",
+            "codeTypePeriode"    => "TRIMESTRE",
+            "dernierePeriode"    => true
+        ];
+
+        $data = $this->getEmbauches($params);
+        var_dump($data);
+        $liste = $data['listeValeursParPeriode'][0]['listeValeursParCategorie'] ?? [];
+
+        // Trier par nombre d’embauches
+        usort($liste, fn($a, $b) => ($b['valeurPrincipaleNombre'] ?? 0) - ($a['valeurPrincipaleNombre'] ?? 0));
+
+        return array_slice($liste, 0, $limit);
+    }
+
+
+    public function getReferentielDesIndicateurs($indicateur)
+    {
+
+        $token = $this->getAccessTokenMarcheTravail();
+        error_log("[FranceTravail] Token pour le Referentiel des indicateur du Marche local : " . substr($token, 0, 10) . "...");
+
+        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $indicateur);
+        $client->setMethod(Zend_Http_Client::GET);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json'
+        ]);
+
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl'
+        ]);
+
+        $response = $client->request();
+
+        error_log("[FranceTravail] Code HTTP API : " . $response->getStatus());
+        error_log("[FranceTravail] Corps de la réponse : " . substr($response->getBody(), 0, 200) . "...");
+
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API Le rReferentiel mache du travail local : " . $response->getBody());
+        }
+
+        $data = json_decode($response->getBody(), true);
+        return $data;
     }
 }
