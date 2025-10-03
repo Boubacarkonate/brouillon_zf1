@@ -445,6 +445,8 @@ class FranceTravailnewController extends Zend_Controller_Action
 
             $dyn = $model->getDynamiqueEmploi($paramsDynamique);
 
+            var_dump($dyn);
+
             $dynamique = null;
 
             if (!empty($dyn['listeValeursParPeriode'])) {
@@ -573,6 +575,72 @@ class FranceTravailnewController extends Zend_Controller_Action
                 $this->view->tensionError = "Données non disponibles pour ce territoire / métier";
             }
 
+            // salaire median
+
+            /// --- Salaire médian ---
+            // --- Salaire médian ---
+            // try {
+            //     $salaireData = $model->getSalaireMedian(
+            //         "DEP",               // ou "REG"
+            //         $territoireCode,
+            //         ['codeRome' => $codeRome]
+            //     );
+
+            //     var_dump($salaireData);
+            //     exit;
+            // } catch (Exception $e) {
+            //     error_log("[FranceTravail] Salaire médian non disponible : " . $e->getMessage());
+            //     $this->view->salaireMedian = null;
+            //     $this->view->salaireCaracteristiques = [];
+            //     $this->view->salaireError = "Salaire médian non disponible pour ce territoire / métier";
+            // }
+
+            try {
+                $salaireData = $model->getSalaireMedian(
+                    "DEP",
+                    $territoireCode,
+                    ['codeRome' => $codeRome]
+                );
+
+                var_dump($salaireData);
+
+                $salaireMedian = null;
+                $salaireCaracteristiques = [];
+
+                if (!empty($salaireData['valeursParPeriode'])) {
+                    $periodeData = end($salaireData['valeursParPeriode']);
+                    var_dump($salaireMedian);
+                    foreach ($periodeData['salaireValeurMontant'] as $valeur) {
+                        // Salaire médian = SAL3
+                        if (($valeur['codeNomenclature'] ?? '') === 'SAL3') {
+                            $salaireMedian = $valeur['valeurPrincipaleMontant'] ?? null;
+                        }
+
+                        // Ajouter toutes les valeurs pour affichage si nécessaire
+                        $salaireCaracteristiques[] = [
+                            'libCaract' => $valeur['codeNomenclature'] ?? '-',
+                            'montant'   => $valeur['valeurPrincipaleMontant'] ?? null,
+                            'taux'      => $valeur['valeurPrincipaleTaux'] ?? null
+                        ];
+                    }
+                }
+
+                var_dump($salaireMedian);           // devrait afficher 4985
+                var_dump($salaireCaracteristiques); // toutes les lignes
+
+
+                $this->view->salaireMedian = $salaireMedian;
+                $this->view->salaireCaracteristiques = $salaireCaracteristiques;
+            } catch (Exception $e) {
+                error_log("[FranceTravail] Salaire médian non disponible : " . $e->getMessage());
+                $this->view->salaireMedian = null;
+                $this->view->salaireCaracteristiques = [];
+                $this->view->salaireError = "Salaire médian non disponible pour ce territoire / métier";
+            }
+
+
+
+
 
 
             // $data = $model->getReferentielDesIndicateurs('/v1/referentiel/indicateurs');
@@ -598,30 +666,6 @@ class FranceTravailnewController extends Zend_Controller_Action
             error_log("[FranceTravail] Erreur API : " . $e->getMessage());
             $this->view->error = $e->getMessage();
         }
-
-        // try {
-        //     // --- Récupération des libellés dynamiques ---
-        //     $libelleTerritoire = $model->getLibelleTerritoire($territoireCode);
-        //     $libelleRome = $model->getLibelleRome($codeRome);
-
-
-
-        //     $this->view->libelleTerritoire = $libelleTerritoire;
-        //     $this->view->libelleRome = $libelleRome;
-
-        //     // --- Ratio DE / Offres ---
-        //     $ratioDEOffres = $model->calculateRatioDEOffres($this->view->demandeurs, $this->view->statsOffreEmploi);
-        //     $this->view->ratioDEOffres = $ratioDEOffres;
-
-        //     // var_dump($ratioDEOffres);
-        //     // exit;
-        //     // --- Top métiers pour ce territoire ---
-        //     $topMetiers = $model->getTopMetiers($territoireCode, 5);
-        //     $this->view->topMetiers = $topMetiers;
-        // } catch (Exception $e) {
-        //     error_log("[FranceTravail] Erreur complémentaire : " . $e->getMessage());
-        //     $this->view->complementaryError = $e->getMessage();
-        // }
     }
 
     // --- Interprétation dynamique emploi ---

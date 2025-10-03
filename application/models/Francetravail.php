@@ -687,6 +687,31 @@ class Application_Model_Francetravail
         return $this->callApi('/v1/indicateur/stat-offres', $params);
     }
 
+    public function getSalaireMedian($codeTypeTerritoire, $codeTerritoire, $query = [])
+    {
+        $endpoint = "/v1/indicateur/salaire-rome-fap/{$codeTypeTerritoire}/{$codeTerritoire}";
+        $token = $this->getAccessTokenMarcheTravail();
+
+        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
+        $client->setMethod(Zend_Http_Client::GET);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json',
+        ]);
+
+        if (!empty($query)) {
+            $client->setParameterGet($query);
+        }
+
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API salaire médian : " . $response->getBody());
+        }
+
+        return json_decode($response->getBody(), true);
+    }
+
+
     // --- Méthode pour récupérer le libellé d'un territoire ---
     public function getLibelleTerritoire($codeTerritoire)
     {
