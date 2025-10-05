@@ -61,9 +61,35 @@
                     <?php endif ?>
                 </ul>
             </div>
+            <select id="moduleSelect" class="form-select">
+                <option value="">----- choix du module ----</option>
+                <option value="<?php echo $this->url(['controller' => 'francetravailnew', 'action' => 'index']); ?>">
+                    offre d'emploi
+                </option>
+                <option
+                    value="<?php echo $this->url(['controller' => 'francetravailnew', 'action' => 'entrepriserecrutement']); ?>">
+                    entreprise recrutement
+                </option>
+                <option value="<?php echo $this->url(['controller' => 'francetravailnew', 'action' => 'services']); ?>">
+                    services
+                </option>
+                <option
+                    value="<?php echo $this->url(['controller' => 'francetravailnew', 'action' => 'marchetravaillocal']); ?>">
+                    marché travail local
+                </option>
+            </select>
+
+
         </div>
     </nav>
     <?php echo $this->layout()->content; ?>
+    <!-- <script>
+        document.getElementById('moduleSelect').addEventListener('change', function() {
+            if (this.value) {
+                window.location.href = this.value;
+            }
+        });
+    </script> -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous">
@@ -71,17 +97,3 @@
 </body>
 
 </html>
-
-<!-- <?php foreach ($this->filtresDynamiques as $filtreNom => $valeurs): ?>
-    <div class="col-md-3">
-        <select name="<?= $this->escape($filtreNom) ?>" class="form-select">
-            <option value="">Tous <?= $this->escape($filtreNom) ?></option>
-            <?php foreach ($valeurs as $code => $libelle): ?>
-                <option value="<?= $this->escape($code) ?>"
-                    <?= ($this->escape($this->params[$filtreNom] ?? '') === $code) ? 'selected' : '' ?>>
-                    <?= $this->escape($libelle) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-<?php endforeach; ?> -->

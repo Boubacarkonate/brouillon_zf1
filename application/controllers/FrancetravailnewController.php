@@ -331,79 +331,86 @@ class FranceTravailnewController extends Zend_Controller_Action
         }
     }
 
-    public function servicesAction()
-    {
-        // Params
-        $page     = (int)$this->_getParam('page', 0);
-        $perPage  = (int)$this->_getParam('perPage', 20);
-        $lat      = $this->_getParam('lat', null);
-        $lon      = $this->_getParam('lon', null);
-        $radius   = (int)$this->_getParam('radius', 10); // km
-        $theme    = $this->_getParam('theme', null); // ex. 'mobilite', 'logement', 'handicap', 'numerique'
-        $query    = $this->_getParam('q', null);
 
-        $model = new Application_Model_DataInclusion();
 
-        try {
-            $searchParams = [
-                'page' => $page,
-                'perPage' => $perPage,
-                'lat' => $lat,
-                'lon' => $lon,
-                'radius' => $radius,
-                'theme' => $theme,
-                'q' => $query,
-            ];
 
-            $result = $model->searchServices($searchParams);
-            // $result expected: ['items' => [...], 'total' => int]
-            $this->view->services = $result['items'] ?? [];
-            $this->view->total = $result['total'] ?? count($this->view->services);
-        } catch (Exception $e) {
-            $this->view->services = [];
-            $this->view->total = 0;
-            $this->view->error = "Erreur API Data Inclusion : " . $e->getMessage();
-            error_log("[Services] Erreur recherche services : " . $e->getMessage());
-        }
-
-        // pass filters back
-        $this->view->page = $page;
-        $this->view->perPage = $perPage;
-        $this->view->lat = $lat;
-        $this->view->lon = $lon;
-        $this->view->radius = $radius;
-        $this->view->theme = $theme;
-        $this->view->q = $query;
-    }
 
     /**
-     * AJAX: retourne le détail d'un service (JSON)
-     * URL: /francetravailnew/service-detail?id=...
+     * Liste / recherche des services
      */
-    public function serviceDetailAction()
+    /** Liste et recherche de services */
+    public function servicesAction()
     {
-        $this->_helper->viewRenderer->setNoRender(true);
-        $this->_helper->layout->disableLayout();
+        $commune = $this->_getParam('commune', null);   // pas de filtre par défaut
+        $theme   = $this->_getParam('theme', null);
+        $type    = $this->_getParam('type', null);
+        $source  = $this->_getParam('source', null);
+        $q       = $this->_getParam('q', null);        // pas de mot-clé par défaut
+        $page    = max(1, (int)$this->_getParam('page', 1));
+        $perPage = 20;
 
-        $id = $this->_getParam('id');
-        if (empty($id)) {
-            return $this->_helper->json(['success' => false, 'message' => 'id manquant']);
-        }
+        $model = new Application_Model_Datainclusion();
 
-        $model = new Application_Model_DataInclusion();
         try {
-            $detail = $model->getServiceDetail($id);
-            return $this->_helper->json(['success' => true, 'data' => $detail]);
+            // --- Sources pour filtre ---
+            $sourcesResp = $model->getSources();
+            $sources = [];
+            foreach ($sourcesResp['items'] ?? [] as $src) {
+                $sources[$src['id']] = $src['nom'] ?? $src['id'];
+            }
+
+            // --- Recherche selon filtres ---
+            $params = [
+                'page'    => $page,
+                'perPage' => $perPage
+            ];
+            if ($commune) $params['commune'] = $commune;
+            if ($theme)   $params['thematiques'] = $theme;
+            if ($type)    $params['type']        = $type;
+            if ($source)  $params['sources']     = $source;
+            if ($q)       $params['q']           = $q;
+
+            $resp = $model->searchServices($params);
+
+
+            $services = [];
+            foreach ($resp['items'] ?? [] as $item) {
+                $s = $item['service'] ?? $item; // selon API
+                $services[] = [
+                    'id'      => $s['id'] ?? null,
+                    'label'   => $s['nom'] ?? null,
+                    'theme'   => $s['thematiques'] ?? [],
+                    'type'    => $s['type'] ?? null,
+                    'address' => $s['adresse'] ?? null,
+                    'source'  => $s['source'] ?? null,
+                    'lat'     => $s['latitude'] ?? null,
+                    'lon'     => $s['longitude'] ?? null,
+                ];
+            }
+
+            // var_dump($services);
+            // exit;
+
+            // --- Passer à la vue ---
+            $this->view->services = $services;
+            $this->view->total    = $resp['total'] ?? count($services);
+            $this->view->page     = $page;
+            $this->view->perPage  = $perPage;
+            $this->view->theme    = $theme;
+            $this->view->type     = $type;
+            $this->view->source   = $source;
+            $this->view->q        = $q;
+            $this->view->sources  = $sources;
         } catch (Exception $e) {
-            error_log("[Services] Erreur detail service $id : " . $e->getMessage());
-            return $this->_helper->json(['success' => false, 'message' => $e->getMessage()]);
+            $this->view->error = $e->getMessage();
         }
     }
+
+
     public function marchetravaillocalAction()
     {
 
-        // // Token widget
-        // $this->view->francetravailToken = $token;
+
 
         // ============================
         // 1. Projets fictifs
@@ -439,31 +446,37 @@ class FranceTravailnewController extends Zend_Controller_Action
                 "codeTerritoire"     => $territoireCode,
                 "codeTypeActivite"   => "MOYENNE",   // global sur le territoire
                 "codeActivite"       => "MOYENNE",   // idem
-                "codeTypePeriode"    => $periodeRecherchee,
+                "codeTypePeriode"    => $periodeRecherchee, //trimestre obligatoire
                 "dernierePeriode"    => true
             ];
 
             $dyn = $model->getDynamiqueEmploi($paramsDynamique);
 
-            var_dump($dyn);
-
+            // var_dump($dyn);
+            // exit;
             $dynamique = null;
 
             if (!empty($dyn['listeValeursParPeriode'])) {
                 $v = $dyn['listeValeursParPeriode'][0];
 
                 // Sécurisation pour éviter les undefined / null
-                $valeur = $v['valeurPrincipaleTaux']
+                $valeur = $v['valeurPrincipaleNom']
                     ?? $v['valeurPrincipaleNombre']
                     ?? $v['valeurPrincipaleMontant']
+                    ?? $v['valeurPrincipaleRang']
+                    ?? $v['valeurPrincipaleTaux']
+                    ?? $v['valeurSecondairePourcentage']
                     ?? null;
+                // var_dump($valeur);
 
                 $dynamique = [
                     'valeur'        => $valeur,
                     'periodeLib'    => $v['libPeriode'] ?? '-',
                     'datMaj'        => $v['datMaj'] ?? null,
                     'territoire'    => $v['libTerritoire'] ?? '-',
+                    'departement' => $v['codeTerritoire'],
                     'activite'      => $v['libActivite'] ?? 'Marché global',
+                    'valeur' => $v['valeurPrincipaleNom'],
                     'interpretation' => $this->interpretDynamique($valeur)
                 ];
             }
@@ -471,8 +484,56 @@ class FranceTravailnewController extends Zend_Controller_Action
             $this->view->dynamique = $dynamique;
 
 
+            /////////////////////////////////////////////////////////////////////////////////////
 
-            // --- Demandeurs d'emploi ---
+            // --- Demandeurs d'emploi DE_5 nouveaux inscrits sur les 12 derniers mois ---
+
+            /////////////////////////////////////////////////////////////
+
+            $paramsDemandeurs12DerniersMois = [
+                "codeTypeTerritoire"   => "DEP",
+                "codeTerritoire"       => $territoireCode,
+                "codeTypeActivite"     => "ROME",
+                "codeActivite"         => $codeRome,
+                "codeTypePeriode"      => $periodeRecherchee,
+                "codeTypeNomenclature" => "CATCAND",
+                "dernierePeriode"      => true
+            ];
+
+            $demandeurs12DerniersMois = $model->getDemandeurs12DerniersMois($paramsDemandeurs12DerniersMois);
+            // var_dump($demandeurs12DerniersMois);
+            // exit;
+
+
+            $demandeurDerniersMois = null;
+            foreach ($demandeurs12DerniersMois['listeValeursParPeriode'] as $v) {
+                if ($v['codeNomenclature'] === 'CUMUL 12 MOIS') {
+
+
+                    $demandeurDerniersMois = [
+                        'periodeLib'       => $v['libPeriode'],
+                        'datMaj'           => $v['datMaj'],
+                        'territoire'       => $v['libTerritoire'],
+                        'departement'      => $v['codeTerritoire'],
+                        'activite'         => $v['libActivite'],
+                        'categorie'        => $v['libNomenclature'],
+                        'nombre'           => $v['valeurPrincipaleNombre'] ?? null,
+                        'pourcentage'      => $v['valeurSecondairePourcentage'] ?? null,
+                        // 'caracteristiques' => $v['listeValeurParCaract'] ?? [],
+                    ];
+                }
+            }
+            // var_dump($demandeur12DerniersMois);
+            // exit;
+            $this->view->demandeur12DerniersMois = $demandeurDerniersMois;
+
+
+
+            /////////////////////////////////////////////////////////////////////////////////////
+
+            // --- Demandeurs d'emploi DE_1 inscrists en fin de trimestre ---
+
+            /////////////////////////////////////////////////////////////////////////////////////
             $paramsDemandeurs = [
                 "codeTypeTerritoire"   => "DEP",
                 "codeTerritoire"       => $territoireCode,
@@ -480,27 +541,52 @@ class FranceTravailnewController extends Zend_Controller_Action
                 "codeActivite"         => $codeRome,
                 "codeTypePeriode"      => $periodeRecherchee,
                 "codeTypeNomenclature" => "CATCAND",
-                "dernierePeriode"      => false
+                "dernierePeriode"      => true
             ];
 
             $dem = $model->getDemandeurs($paramsDemandeurs);
+            // var_dump($dem);
+            // exit;
 
             $demandeursData = [];
+            $dernier = null;
             foreach ($dem['listeValeursParPeriode'] as $v) {
-                $demandeursData[] = [
-                    'periodeLib'    => $v['libPeriode'],
-                    'datMaj'        => $v['datMaj'],
-                    'territoire'    => $v['libTerritoire'],
-                    'activite'      => $v['libActivite'],
-                    'categorie'     => $v['libNomenclature'],
-                    'nombre'        => $v['valeurPrincipaleNombre'] ?? null,
-                    'pourcentage'   => $v['valeurSecondairePourcentage'] ?? null,
-                    'caracteristiques' => $v['listeValeurParCaract'] ?? []
-                ];
-            }
+                if ($v['codeNomenclature'] === 'A') {
+                    // On ne garde que la période la plus récente
 
-            $this->view->demandeurs = $demandeursData;
-            $this->view->dernierDemandeurs = !empty($demandeursData) ? end($demandeursData) : null;
+                    // Filtre GENRE
+                    $genres = [];
+                    if (!empty($v['listeValeurParCaract'])) {
+                        foreach ($v['listeValeurParCaract'] as $caract) {
+                            if ($caract['codeTypeCaract'] === 'GENRE') {
+                                $genres[] = $caract;
+                            }
+                        }
+                    }
+
+                    $dernier = [
+                        'periodeLib'       => $v['libPeriode'],
+                        'datMaj'           => $v['datMaj'],
+                        'territoire'       => $v['libTerritoire'],
+                        'departement'      => $v['codeTerritoire'],
+                        'activite'         => $v['libActivite'],
+                        'categorie'        => $v['libNomenclature'],
+                        'nombre'           => $v['valeurPrincipaleNombre'] ?? null,
+                        'pourcentage'      => $v['valeurSecondairePourcentage'] ?? null,
+                        'caracteristiquesGenre' => $genres,
+                        'caracteristiques' => $v['listeValeurParCaract'] ?? [],
+                    ];
+                }
+            }
+            // var_dump($dernier);
+            // exit;
+            $this->view->dernierDemandeurs = $dernier;
+
+
+
+            // var_dump($demandeursData[0]);
+            // exit;
+
 
 
             // --- Embauches ---
@@ -511,27 +597,88 @@ class FranceTravailnewController extends Zend_Controller_Action
                 "codeActivite"         => $codeRome,
                 "codeTypePeriode"      => $periodeRecherchee,
                 "codeTypeNomenclature" => "CATCANDxDUREEEMP",
-                "dernierePeriode"      => false
+                "dernierePeriode"      => true
             ];
 
             $emb = $model->getEmbauches($paramsEmbauches);
 
-            $embauchesData = [];
-            foreach ($emb['listeValeursParPeriode'] as $v) {
-                $embauchesData[] = [
-                    'periodeLib'    => $v['libPeriode'],
-                    'datMaj'        => $v['datMaj'],
-                    'territoire'    => $v['libTerritoire'],
-                    'activite'      => $v['libActivite'],
-                    'categorie'     => $v['libNomenclature'],
-                    'nombre'        => $v['valeurPrincipaleNombre'] ?? null,
-                    'pourcentage'   => $v['valeurSecondairePourcentage'] ?? null,
-                    'caracteristiques' => $v['listeValeurParCaract'] ?? []
-                ];
-            }
 
+            $embauchesData = null;
+            foreach ($emb['listeValeursParPeriode'] as $v) {
+                if ($v['codeNomenclature'] === "ABCDEFG-TOUTE") {
+
+                    $genres = [];
+                    $contrat = [];
+                    if (!empty($v['listeValeurParCaract'])) {
+                        foreach ($v['listeValeurParCaract'] as $caract) {
+                            if ($caract['codeTypeCaract'] === 'GENRE') {
+                                $genres[] = $caract;
+                            } elseif ($caract['codeTypeCaract'] === 'TYPECTR') {
+                                $contrat[] = $caract;
+                            }
+                        }
+                    }
+
+
+                    $embauchesData = [
+                        'periodeLib'    => $v['libPeriode'],
+                        'datMaj'        => $v['datMaj'],
+                        'territoire'    => $v['libTerritoire'],
+                        'departement'    => $v['codeTerritoire'],
+                        'activite'      => $v['libActivite'],
+                        'categorie'     => $v['libNomenclature'],
+                        'nombre'        => $v['valeurPrincipaleNombre'] ?? null,
+                        'pourcentage'   => $v['valeurSecondairePourcentage'] ?? null,
+                        'caracteristiques' => $v['listeValeurParCaract'] ?? [],
+                        'genre'             => $genres,
+                        'typeContrat'    => $contrat
+                    ];
+                }
+            }
+            // var_dump($embauchesData);
+            // exit;
             $this->view->embauches = $embauchesData;
-            $this->view->dernieresEmbauches = !empty($embauchesData) ? end($embauchesData) : null;
+
+            // --- Offres d'emploi ---
+            $paramsOffres = [
+                "codeTypeTerritoire"   => "DEP",
+                "codeTerritoire"       => $territoireCode,
+                "codeTypeActivite"     => "ROME",
+                "codeActivite"         => $codeRome,
+                "codeTypePeriode"      => $periodeRecherchee,
+                "codeTypeNomenclature" => "ORIGINEOFF",
+                "dernierePeriode"      => true
+            ];
+
+            $offres = $model->getStatsOffreEmploi($paramsOffres);
+
+            $offreData = null;
+            foreach ($offres['listeValeursParPeriode'] as $v) {
+                if ($v['codeNomenclature'] === 'TOFF-CUMUL12MOIS') {
+
+                    $offreData = [
+                        'periodeLib'    => $v['libPeriode'],
+                        'datMaj'        => $v['datMaj'],
+                        'territoire'    => $v['libTerritoire'],
+                        'departement'    => $v['codeTerritoire'],
+                        'activite'      => $v['libActivite'],
+                        'codeTypePeriode' => $v['codeTypePeriode'],
+                        'categorie'     => $v['libNomenclature'],
+                        'nombre'        => $v['valeurPrincipaleNombre'] ?? null,
+                        // 'caracteristiques' => $v['listeValeurParCaract'] ?? [],
+                    ];
+                }
+            };
+            // var_dump($offreData);
+            // exit;
+
+            $this->view->statsOffres = $offreData;
+
+
+            // var_dump($offres['listeValeursParPeriode'][3]);
+            // exit;
+
+
             // --- Tension recrutement ---
             $paramsTension = [
                 "codeTypeTerritoire"   => "DEP",
@@ -547,114 +694,167 @@ class FranceTravailnewController extends Zend_Controller_Action
             try {
                 $ten = $model->getTensionRecrutement($paramsTension);
 
-                // --- Filtrer l’indicateur principal ---
-                $tensionPrincipale = null;
+                // --- Initialisation des indicateurs ---
+                $tensionPrincipale       = null;  // Indicateur de tension global
+                $intensiteEmbauche       = null;  // Intensité d’embauche
+                $manqueMainOeuvre        = null;  // Manque de main-d’œuvre
+                $attractiviteSalariale   = null;  // Attractivité salariale
+                $conditionsTravail       = null;  // Conditions de travail
+                $durabiliteEmploi        = null;  // Durabilité de l’emploi
+                $inadEquationGeo         = null;  // Inadéquation géographique
 
                 foreach ($ten['listeValeursParPeriode'] as $v) {
-                    if ($v['codeNomenclature'] === 'PERSPECTIVE') {
-                        $valeur = $v['valeurPrincipaleDecimale'];
+                    $valeur = $v['valeurPrincipaleDecimale'] ?? null;
 
-                        $tensionPrincipale = [
-                            'valeur'        => $valeur,                    // valeur réelle
-                            'periodeType'   => $v['codeTypePeriode'],      // ex. 'ANNEE'
-                            'periodeCode'   => $v['codePeriode'],          // ex. '2024'
-                            'periodeLib'    => $v['libPeriode'],           // ex. 'Année 2024'
-                            'datMaj'        => $v['datMaj'],
-                            'libActivite'   => $v['libActivite'],
-                            'interpretation' => $this->interpretTension($valeur), // texte compréhensible
-                        ];
-                        break;
+                    switch ($v['codeNomenclature']) {
+                        case 'PERSPECTIVE':
+                            $tensionPrincipale = [
+                                'valeur'         => $valeur,
+                                'periodeType'    => $v['codeTypePeriode'],
+                                'periodeCode'    => $v['codePeriode'],
+                                'periodeLib'     => $v['libPeriode'],
+                                'datMaj'         => $v['datMaj'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
+
+                        case 'INT_EMB':
+                            $intensiteEmbauche = [
+                                'valeur'         => $valeur,
+                                'periodeLib'     => $v['libPeriode'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
+
+                        case 'MAIN_OEUVRE':
+                            $manqueMainOeuvre = [
+                                'valeur'         => $valeur,
+                                'periodeLib'     => $v['libPeriode'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
+
+                        case 'ATTR_SALARIALE':
+                            $attractiviteSalariale = [
+                                'valeur'         => $valeur,
+                                'periodeLib'     => $v['libPeriode'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
+
+                        case 'COND_TRAVAIL':
+                            $conditionsTravail = [
+                                'valeur'         => $valeur,
+                                'periodeLib'     => $v['libPeriode'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
+
+                        case 'DUR_EMPL':
+                            $durabiliteEmploi = [
+                                'valeur'         => $valeur,
+                                'periodeLib'     => $v['libPeriode'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
+
+                        case 'MISMATCH_GEO':
+                            $inadEquationGeo = [
+                                'valeur'         => $valeur,
+                                'periodeLib'     => $v['libPeriode'],
+                                'libActivite'    => $v['libActivite'],
+                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            ];
+                            break;
                     }
                 }
 
-                $this->view->tension = $tensionPrincipale;
-                $this->view->tension = $tensionPrincipale;
+                // var_dump($tensionPrincipale);
+                // var_dump($intensiteEmbauche);
+                // var_dump($manqueMainOeuvre);
+                // var_dump($attractiviteSalariale);
+                // var_dump($conditionsTravail);
+                // var_dump($durabiliteEmploi);
+                // var_dump($inadEquationGeo);
+                // exit;
+
+                // Passe les valeurs à la vue
+                $this->view->tensionPrincipale      = $tensionPrincipale;
+                $this->view->intensiteEmbauche      = $intensiteEmbauche;
+                $this->view->manqueMainOeuvre       = $manqueMainOeuvre;
+                $this->view->attractiviteSalariale  = $attractiviteSalariale;
+                $this->view->conditionsTravail      = $conditionsTravail;
+                $this->view->durabiliteEmploi       = $durabiliteEmploi;
+                $this->view->inadEquationGeo        = $inadEquationGeo;
             } catch (Exception $e) {
                 error_log("[FranceTravail] Tension non disponible : " . $e->getMessage());
-                $this->view->tension = null;
-                $this->view->tensionError = "Données non disponibles pour ce territoire / métier";
+                $this->view->tensionPrincipale = null;
+                $this->view->tensionError      = "Données non disponibles pour ce territoire / métier";
             }
 
             // salaire median
-
-            /// --- Salaire médian ---
-            // --- Salaire médian ---
-            // try {
-            //     $salaireData = $model->getSalaireMedian(
-            //         "DEP",               // ou "REG"
-            //         $territoireCode,
-            //         ['codeRome' => $codeRome]
-            //     );
-
-            //     var_dump($salaireData);
-            //     exit;
-            // } catch (Exception $e) {
-            //     error_log("[FranceTravail] Salaire médian non disponible : " . $e->getMessage());
-            //     $this->view->salaireMedian = null;
-            //     $this->view->salaireCaracteristiques = [];
-            //     $this->view->salaireError = "Salaire médian non disponible pour ce territoire / métier";
-            // }
+            $salaire = $model->getStatsSalaire('DEP', $territoireCode);
+            $codeRomeCible = trim($codeRome); // code ROME demandé
+            $salaireStruct = [];
 
             try {
-                $salaireData = $model->getSalaireMedian(
-                    "DEP",
-                    $territoireCode,
-                    ['codeRome' => $codeRome]
-                );
+                if (!empty($salaire['valeursParPeriode'])) {
+                    foreach ($salaire['valeursParPeriode'] as $v) {
+                        // On filtre par code ROME
+                        if (trim($v['codeActivite']) !== $codeRomeCible) continue;
 
-                var_dump($salaireData);
+                        $activite  = $v['libActivite'] ?? '';
+                        $periode   = $v['libPeriode'] ?? '';
+                        $datMaj    = $v['datMaj'] ?? '';
 
-                $salaireMedian = null;
-                $salaireCaracteristiques = [];
-
-                if (!empty($salaireData['valeursParPeriode'])) {
-                    $periodeData = end($salaireData['valeursParPeriode']);
-                    var_dump($salaireMedian);
-                    foreach ($periodeData['salaireValeurMontant'] as $valeur) {
-                        // Salaire médian = SAL3
-                        if (($valeur['codeNomenclature'] ?? '') === 'SAL3') {
-                            $salaireMedian = $valeur['valeurPrincipaleMontant'] ?? null;
+                        // Transformation des salaires en clé => valeur
+                        $salaires = [];
+                        if (!empty($v['salaireValeurMontant'])) {
+                            foreach ($v['salaireValeurMontant'] as $s) {
+                                $salaires[$s['codeNomenclature']] = $s['valeurPrincipaleMontant'];
+                            }
                         }
 
-                        // Ajouter toutes les valeurs pour affichage si nécessaire
-                        $salaireCaracteristiques[] = [
-                            'libCaract' => $valeur['codeNomenclature'] ?? '-',
-                            'montant'   => $valeur['valeurPrincipaleMontant'] ?? null,
-                            'taux'      => $valeur['valeurPrincipaleTaux'] ?? null
+                        $salaireStruct[] = [
+                            'activite'   => $activite,
+                            'periode'    => $periode,
+                            'datMaj'     => $datMaj,
+                            'salaire1'   => $salaires['SAL1'] ?? null, // débutant
+                            'salaire2'   => $salaires['SAL2'] ?? null, // moyen
+                            'salaire3'   => $salaires['SAL3'] ?? null, // expérimenté
                         ];
                     }
                 }
 
-                var_dump($salaireMedian);           // devrait afficher 4985
-                var_dump($salaireCaracteristiques); // toutes les lignes
+                // echo "<pre>";
+                // print_r($salaire);
+                // echo "</pre>";
+                // exit;
 
-
-                $this->view->salaireMedian = $salaireMedian;
-                $this->view->salaireCaracteristiques = $salaireCaracteristiques;
+                if (empty($salaireStruct)) {
+                    // Aucun résultat pour ce code ROME
+                    $this->view->salaireParRome = null;
+                    $this->view->salaireError = "Aucune donnée trouvée pour le code ROME {$codeRomeCible}";
+                } else {
+                    $this->view->salaireParRome = $salaireStruct;
+                }
             } catch (Exception $e) {
-                error_log("[FranceTravail] Salaire médian non disponible : " . $e->getMessage());
-                $this->view->salaireMedian = null;
-                $this->view->salaireCaracteristiques = [];
-                $this->view->salaireError = "Salaire médian non disponible pour ce territoire / métier";
+                $this->view->salaireParRome = null;
+                if (strpos($e->getMessage(), '404') !== false) {
+                    $this->view->salaireError = "Aucune donnée trouvée pour le code ROME {$codeRomeCible}";
+                } else {
+                    $this->view->salaireError = "Erreur API : " . $e->getMessage();
+                }
             }
 
 
 
-
-
-
-            // $data = $model->getReferentielDesIndicateurs('/v1/referentiel/indicateurs');
-            $data = $model->getReferentielDesIndicateurs('/v1/referentiel/familles-indicateurs');
-
-            $codeFamille = "DEMANDEURS"; // exemple
-            $codeIndicateur = "DE_1";    // indicateur précis
-
-            $data = $model->getReferentielDesIndicateurs("/v1/referentiel/familles-indicateurs");
-
-            // echo "<pre>";
-            // var_dump($data);
-            // echo "</pre>";
-            // exit;
 
 
 
@@ -724,20 +924,78 @@ class FranceTravailnewController extends Zend_Controller_Action
     }
 
 
-    protected function interpretTension($valeur)
-    {
-        if ($valeur === null) return "Donnée non disponible";
+    // protected function interpretTension($valeur) {
+    //     if ($valeur === null) return "Donnée non disponible";
 
-        if ($valeur >= 1) {
-            return "Tension forte";
-        } elseif ($valeur > 0) {
-            return "Tension modérée";
-        } elseif ($valeur == 0) {
-            return "Tension neutre";
-        } elseif ($valeur > -1) {
-            return "Tension faible";
-        } else {
-            return "Tension très faible";
+    //     if ($valeur >= 1) {
+    //         return "Tension forte";
+    //     } elseif ($valeur > 0) {
+    //         return "Tension modérée";
+    //     } elseif ($valeur == 0) {
+    //         return "Tension neutre";
+    //     } elseif ($valeur > -1) {
+    //         return "Tension faible";
+    //     } else {
+    //         return "Tension très faible";
+    //     }   
+    //      }
+
+    protected function interpretIndicateur(string $codeNomenclature, ?float $valeur): string
+    {
+        if ($valeur === null) {
+            return "Donnée non disponible";
+        }
+
+        switch ($codeNomenclature) {
+
+            // ======================
+            // Indicateur de tension global
+            // ======================
+            case 'PERSPECTIVE':
+                if ($valeur >= 1) return "Tension forte";
+                if ($valeur > 0) return "Tension modérée";
+                if ($valeur == 0) return "Tension neutre";
+                if ($valeur > -1) return "Tension faible";
+                return "Tension très faible";
+
+                // ======================
+                // Indicateurs prioritaires
+                // ======================
+            case 'INT_EMB':
+                if ($valeur >= 1) return "Embauche rapide";
+                if ($valeur > 0) return "Embauche modérée";
+                return "Embauche faible";
+
+            case 'MAIN_OEUVRE':
+                if ($valeur >= 1) return "Forte pénurie";
+                if ($valeur > 0) return "Pénurie modérée";
+                return "Pas de pénurie";
+
+                // ======================
+                // Indicateurs secondaires
+                // ======================
+            case 'ATTR_SALARIALE':
+                if ($valeur >= 0.5) return "Salarialement attractif";
+                if ($valeur > 0) return "Légèrement attractif";
+                return "Peu attractif";
+
+            case 'COND_TRAVAIL':
+                if ($valeur >= 0.5) return "Bonnes conditions";
+                if ($valeur > 0) return "Conditions correctes";
+                return "Conditions difficiles";
+
+            case 'DUR_EMPL':
+                if ($valeur >= 0.5) return "Emplois stables";
+                if ($valeur > 0) return "Emplois moyennement stables";
+                return "Emplois précaires";
+
+            case 'MISMATCH_GEO':
+                if ($valeur >= 0.5) return "Fort décalage géographique";
+                if ($valeur > 0) return "Décalage modéré";
+                return "Décalage faible";
+
+            default:
+                return "Valeur : " . $valeur;
         }
     }
 }

@@ -552,6 +552,8 @@ class Application_Model_Francetravail
     // ---------------------------
     // MARCHE EMPLOI LOCAL
     // ---------------------------
+
+
     public function tokenMarcheTravail()
     {
         if ($this->accessTokenMarcheTravail && $this->tokenMarcheTravailExpiresAt && time() < $this->tokenMarcheTravailExpiresAt) {
@@ -677,17 +679,17 @@ class Application_Model_Francetravail
         return $this->callApi('/v1/indicateur/stat-demandeurs', $params);
     }
 
+    public function getDemandeurs12DerniersMois($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-demandeurs-entrant', $params);
+    }
+
     public function getTensionRecrutement($params)
     {
         return $this->callApi('/v1/indicateur/stat-perspective-employeur', $params);
     }
 
-    public function getStatsEmploi($params)
-    {
-        return $this->callApi('/v1/indicateur/stat-offres', $params);
-    }
-
-    public function getSalaireMedian($codeTypeTerritoire, $codeTerritoire, $query = [])
+    public function getStatsSalaire($codeTypeTerritoire, $codeTerritoire)
     {
         $endpoint = "/v1/indicateur/salaire-rome-fap/{$codeTypeTerritoire}/{$codeTerritoire}";
         $token = $this->getAccessTokenMarcheTravail();
@@ -699,9 +701,7 @@ class Application_Model_Francetravail
             'Accept'        => 'application/json',
         ]);
 
-        if (!empty($query)) {
-            $client->setParameterGet($query);
-        }
+
 
         $response = $client->request();
         if (!$response->isSuccessful()) {
@@ -711,6 +711,10 @@ class Application_Model_Francetravail
         return json_decode($response->getBody(), true);
     }
 
+    public function getStatsOffreEmploi($params)
+    {
+        return $this->callApi('/v1/indicateur/stat-offres', $params);
+    }
 
     // --- Méthode pour récupérer le libellé d'un territoire ---
     public function getLibelleTerritoire($codeTerritoire)
@@ -734,42 +738,6 @@ class Application_Model_Francetravail
             }
         }
         return $codeRome;
-    }
-
-    // --- Calcul dynamique du ratio DE / offres ---
-    public function calculateRatioDEOffres($demandeurs, $offres)
-    {
-        $nbDE = (int)($demandeurs['valeurPrincipaleNombre'] ?? 0);
-        $nbOffres = (int)($offres['valeurPrincipaleNombre'] ?? 0);
-
-        if ($nbOffres === 0) {
-            return "N/A"; // plutôt que null pour la vue
-        }
-
-        return round($nbDE / $nbOffres, 2);
-    }
-
-
-    // --- Méthode pour récupérer les métiers principaux d’un territoire ---
-    public function getTopMetiers($codeTerritoire, $limit = 5)
-    {
-        $params = [
-            "codeTypeTerritoire" => "DEP",
-            "codeTerritoire"     => $codeTerritoire,
-            "codeTypeActivite"   => "MOYENNE",
-            "codeActivite"       => "MOYENNE",
-            "codeTypePeriode"    => "TRIMESTRE",
-            "dernierePeriode"    => true
-        ];
-
-        $data = $this->getEmbauches($params);
-        var_dump($data);
-        $liste = $data['listeValeursParPeriode'][0]['listeValeursParCategorie'] ?? [];
-
-        // Trier par nombre d’embauches
-        usort($liste, fn($a, $b) => ($b['valeurPrincipaleNombre'] ?? 0) - ($a['valeurPrincipaleNombre'] ?? 0));
-
-        return array_slice($liste, 0, $limit);
     }
 
 
