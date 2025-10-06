@@ -341,66 +341,172 @@ class FranceTravailnewController extends Zend_Controller_Action
     /** Liste et recherche de services */
     public function servicesAction()
     {
-        $commune = $this->_getParam('commune', null);   // pas de filtre par défaut
-        $theme   = $this->_getParam('theme', null);
-        $type    = $this->_getParam('type', null);
-        $source  = $this->_getParam('source', null);
-        $q       = $this->_getParam('q', null);        // pas de mot-clé par défaut
-        $page    = max(1, (int)$this->_getParam('page', 1));
-        $perPage = 20;
+        $codeCommune = $this->_getParam('code_commune', '75120');
+        $theme       = $this->_getParam('theme', null);
+        $type        = $this->_getParam('type', null);
+        $source      = $this->_getParam('source', null);
+        $q           = $this->_getParam('q', null);
+        $page        = max(1, (int)$this->_getParam('page', 1));
+        $perPage     = 1000;
+        $themeValue = $this->_getParam('themeValue');
+        $typeValue = $this->_getParam('typeValue');
 
         $model = new Application_Model_Datainclusion();
 
+
+        // recuperation de la liste des thématiques
+        // $a = $model->getRefThematique();
+        // var_dump($a);
+        // exit;
+
+        $themesRecuperer   = $model->getRefThematique();
+
+        $typeRecuperer = $model->getTypeServices();
+        $allTypes = [];
+        foreach ($typeRecuperer as $key => $value) {
+            $allTypes[] = $value['label'];
+        }
+
+
+        $sourceRecuperer = $model->getSources();
+        var_dump($sourceRecuperer);
+        exit;
+
+
+
+        // $b = [];
+        // foreach ($a as $label) {
+        //     $b[] = $label['label'];
+        // }
+
+
+        $typeService = $model->getTypeServices();
+        // var_dump($typeService);
+        // exit;
+
         try {
-            // --- Sources pour filtre ---
-            $sourcesResp = $model->getSources();
-            $sources = [];
-            foreach ($sourcesResp['items'] ?? [] as $src) {
-                $sources[$src['id']] = $src['nom'] ?? $src['id'];
+            // --- Recherche sans filtre pour récupérer toutes les thématiques/types/structures ---
+            $allServicesResp = $model->searchServices(['page' => 1, 'perPage' => $perPage]);
+            $allServices = $allServicesResp['items'] ?? [];
+
+            $themes     = [];
+            $types      = [];
+            $sources    = [];
+            $structures = [];
+
+            foreach ($allServices as $item) {
+                $s = $item['service'] ?? $item;
+
+                // Thématiques
+                foreach ($s['thematiques'] ?? [] as $t) {
+                    $themes[$t] = $t;
+                }
+
+                // Types
+                if (!empty($s['type'])) {
+                    $types[$s['type']] = $s['type'];
+                }
+
+                // Sources
+                if (!empty($s['source'])) {
+                    $sources[$s['source']] = $s['source'];
+                }
+
+                // Structures
+                if (!empty($s['structure'])) {
+                    $struct = $s['structure'];
+                    $id = $struct['id'] ?? uniqid('struct_');
+                    $structures[$id] = [
+                        'id'      => $id,
+                        'label'   => $struct['nom'] ?? $id,
+                        'address' => $struct['adresse'] ?? '',
+                        'lat'     => $struct['latitude'] ?? null,
+                        'lon'     => $struct['longitude'] ?? null,
+                    ];
+                }
             }
 
-            // --- Recherche selon filtres ---
+            ksort($themes);
+            ksort($types);
+            ksort($sources);
+
+            // --- Recherche filtrée pour la vue ---
             $params = [
                 'page'    => $page,
-                'perPage' => $perPage
+                'perPage' => 20,
             ];
-            if ($commune) $params['commune'] = $commune;
-            if ($theme)   $params['thematiques'] = $theme;
-            if ($type)    $params['type']        = $type;
-            if ($source)  $params['sources']     = $source;
-            if ($q)       $params['q']           = $q;
+
+            if ($codeCommune) $params['code_commune'] = $codeCommune;
+            if ($theme)       $params['thematiques']  = $theme;
+            if ($type)        $params['types']        = $type;
+            if ($source)      $params['sources']      = $source;
+            if ($q)           $params['q']            = $q;
 
             $resp = $model->searchServices($params);
 
-
             $services = [];
+            $filteredStructures = [];
+
             foreach ($resp['items'] ?? [] as $item) {
-                $s = $item['service'] ?? $item; // selon API
+                $s = $item['service'] ?? $item;
+
                 $services[] = [
-                    'id'      => $s['id'] ?? null,
-                    'label'   => $s['nom'] ?? null,
-                    'theme'   => $s['thematiques'] ?? [],
-                    'type'    => $s['type'] ?? null,
-                    'address' => $s['adresse'] ?? null,
-                    'source'  => $s['source'] ?? null,
-                    'lat'     => $s['latitude'] ?? null,
-                    'lon'     => $s['longitude'] ?? null,
+                    'id'          => $s['id'] ?? null,
+                    'label'       => $s['nom'] ?? null,
+                    'description' => $s['description'] ?? null,
+                    'codePostal'  => $s['code_postal'] ?? null,
+                    'telephone'   => $s['telephone'] ?? null,
+                    'courriel'    => $s['courriel'] ?? null,
+                    'theme'       => $s['thematiques'] ?? [],
+                    'type'        => $s['type'] ?? null,
+                    'adresse'     => $s['adresse'] ?? null,
+                    'source'      => $s['source'] ?? null,
+                    'lat'         => $s['latitude'] ?? null,
+                    'lon'         => $s['longitude'] ?? null,
+                    'commune'     => $s['commune'] ?? null,
+                    'structure'   => $s['structure'] ?? null,
+                    'distance'    => $s['distance'] ?? null,
+                    'modes_accueil'    => $s['modes_accueil'] ?? null,
                 ];
+
+                // var_dump($services);
+                // exit;
+
+                // Structures liées aux services filtrés
+                if (!empty($s['structure'])) {
+                    $struct = $s['structure'];
+                    $id = $struct['id'] ?? uniqid('struct_');
+                    $filteredStructures[$id] = [
+                        'id'          => $id,
+                        'label'       => $struct['nom'] ?? $id,
+                        'adresse'     => $s['adresse'] ?? null,
+                        'commune'     => $s['commune'] ?? null,
+                        'codePostal'  => $s['code_postal'] ?? null,
+                        'telephone'   => $s['telephone'] ?? null,
+                        'courriel'    => $s['courriel'] ?? null,
+                        'description' => $s['description'] ?? null,
+                    ];
+                }
             }
 
-            // var_dump($services);
-            // exit;
+            // --- Passage à la vue ---
+            $this->view->thematique = $themesRecuperer;
+            $this->view->typeValue = $typeValue;
+            $this->view->allTypes = $allTypes;
 
-            // --- Passer à la vue ---
-            $this->view->services = $services;
-            $this->view->total    = $resp['total'] ?? count($services);
-            $this->view->page     = $page;
-            $this->view->perPage  = $perPage;
-            $this->view->theme    = $theme;
-            $this->view->type     = $type;
-            $this->view->source   = $source;
-            $this->view->q        = $q;
-            $this->view->sources  = $sources;
+            $this->view->codeCommune = $codeCommune;
+            $this->view->services    = $services;
+            $this->view->structures  = $filteredStructures;
+            $this->view->total       = $resp['total'] ?? count($services);
+            $this->view->page        = $page;
+            $this->view->perPage     = $perPage;
+            $this->view->theme       = $theme;
+            $this->view->type        = $type;
+            $this->view->source      = $source;
+            $this->view->q           = $q;
+            $this->view->themes      = $themes;
+            $this->view->types       = $types;
+            $this->view->sources     = $sources;
         } catch (Exception $e) {
             $this->view->error = $e->getMessage();
         }

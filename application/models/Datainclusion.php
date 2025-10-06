@@ -26,8 +26,15 @@ class Application_Model_Datainclusion
         // Décoder JSON
         return json_decode($response->getBody(), true);
     }
+    public function getTypeServices()
+    {
+        $resp = $this->callApi('/api/v1/doc/types-services');
 
-    /** Recherche de services filtrés */
+
+        return $resp;
+    }
+
+
     public function searchServices(array $params = [])
     {
         // Pagination par défaut
@@ -40,15 +47,26 @@ class Application_Model_Datainclusion
         return $this->callApi('/api/v1/search/services', $params);
     }
 
-    /** Récupère toutes les sources */
     public function getSources()
     {
         return $this->callApi('/api/v1/sources');
     }
 
+
     /** Détail d’un service par id */
-    public function getService($id)
+    public function getRefThematique()
     {
-        return $this->callApi('/api/v1/services/' . urlencode($id));
+        $data = $this->callApi('/api/v1/doc/thematiques');
+
+        $themes = [];
+
+        if (is_array($data)) {
+            foreach ($data as $item) {
+                $themes[$item['value']] = $item['label'];
+            }
+        }
+
+        ksort($themes); // tri alphabétique optionnel
+        return $themes;
     }
 }
