@@ -102,13 +102,14 @@
                 <label class="form-label text-muted">Source</label>
                 <select name="source" class="form-select shadow-sm">
                     <option value="">Toutes sources</option>
-                    <?php foreach ($this->sources as $id => $label): ?>
-                        <option value="<?= $this->escape($id) ?>" <?= ($this->source == $id ? 'selected' : '') ?>>
-                            <?= $this->escape($label) ?>
+                    <?php foreach ($this->sourcesList as $slug => $nom): ?>
+                        <option value="<?= $this->escape($slug) ?>" <?= ($this->source == $slug ? 'selected' : '') ?>>
+                            <?= $this->escape($nom) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
+
 
             <div style="min-width:220px;">
                 <label class="form-label text-muted">Mot-clé</label>

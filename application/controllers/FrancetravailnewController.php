@@ -368,9 +368,16 @@ class FranceTravailnewController extends Zend_Controller_Action
         }
 
 
-        $sourceRecuperer = $model->getSources();
-        var_dump($sourceRecuperer);
-        exit;
+        $sourcesData = $model->getSources();
+        $sourcesRecuperer = [];
+        foreach ($sourcesData as $s) {
+            // clé = slug (utilisée dans les requêtes / filtres)
+            // valeur = nom (affichée dans le select)
+            $sourcesRecuperer[$s['slug']] = $s['nom'];
+        }
+
+        // var_dump($sourceRecuperer);
+        // exit;
 
 
 
@@ -493,6 +500,7 @@ class FranceTravailnewController extends Zend_Controller_Action
             $this->view->thematique = $themesRecuperer;
             $this->view->typeValue = $typeValue;
             $this->view->allTypes = $allTypes;
+            $this->view->sourcesList = $sourcesRecuperer;
 
             $this->view->codeCommune = $codeCommune;
             $this->view->services    = $services;
