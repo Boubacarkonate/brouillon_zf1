@@ -38,47 +38,47 @@
     <!-- Liste entreprises -->
     <div class="col-md-3">
         <?php if (!empty($this->resultats['items'])): ?>
-        <div class="d-flex flex-column gap-3 overflow-auto" style="max-height:80vh;">
-            <?php foreach ($this->resultats['items'] as $idx => $entreprise): ?>
-            <div class="card shadow-sm" data-entreprise-idx="<?= $idx ?>">
-                <div class="card-body">
-                    <h5 class="card-title text-primary"><?= $this->escape($entreprise['company_name'] ?? '') ?></h5>
-                    <p class="small text-muted mb-1">
-                        <?= $this->escape(($entreprise['naf_label'] ?? '') . ' (' . ($entreprise['naf'] ?? '') . ')') ?>
-                    </p>
-                    <p class="small text-muted mb-1">
-                        <?= $this->escape($entreprise['city'] ?? '') ?>
-                        (<?= $this->escape($entreprise['postcode'] ?? '') ?>)
-                    </p>
-                    <p class="small text-muted mb-1">
-                        Effectif:
-                        <?= ($entreprise['headcount_min'] ?? '') . ' - ' . ($entreprise['headcount_max'] ?? '') ?><br>
-                        Score d'embauche:
-                        <?= isset($entreprise['hiring_potential']) ? round($entreprise['hiring_potential'], 1) . '%' : '' ?><br>
-                        Haut potentiel: <?= !empty($entreprise['is_high_potential']) ? 'Oui' : 'Non' ?>
-                    </p>
-                    <p>Siret : <?= $entreprise['siret'] ?></p>
-                    <p class="small text-muted mb-1">
-                        <?= $this->escape($entreprise['adresse_complete'] ?? '') ?>
-                    </p>
+            <div class="d-flex flex-column gap-3 overflow-auto" style="max-height:80vh;">
+                <?php foreach ($this->resultats['items'] as $idx => $entreprise): ?>
+                    <div class="card shadow-sm" data-entreprise-idx="<?= $idx ?>">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary"><?= $this->escape($entreprise['company_name'] ?? '') ?></h5>
+                            <p class="small text-muted mb-1">
+                                <?= $this->escape(($entreprise['naf_label'] ?? '') . ' (' . ($entreprise['naf'] ?? '') . ')') ?>
+                            </p>
+                            <p class="small text-muted mb-1">
+                                <?= $this->escape($entreprise['city'] ?? '') ?>
+                                (<?= $this->escape($entreprise['postcode'] ?? '') ?>)
+                            </p>
+                            <p class="small text-muted mb-1">
+                                Effectif:
+                                <?= ($entreprise['headcount_min'] ?? '') . ' - ' . ($entreprise['headcount_max'] ?? '') ?><br>
+                                Score d'embauche:
+                                <?= isset($entreprise['hiring_potential']) ? round($entreprise['hiring_potential'], 1) . '%' : '' ?><br>
+                                Haut potentiel: <?= !empty($entreprise['is_high_potential']) ? 'Oui' : 'Non' ?>
+                            </p>
+                            <p>Siret : <?= $entreprise['siret'] ?></p>
+                            <p class="small text-muted mb-1">
+                                <?= $this->escape($entreprise['adresse_complete'] ?? '') ?>
+                            </p>
 
 
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-primary btn-voir-carte" data-idx="<?= $idx ?>"
-                            <?= empty($entreprise['location']['lat']) ? 'disabled title="Localisation indisponible"' : '' ?>>
-                            Voir sur la carte
-                        </button>
-                        <a href="export_csv.php?siret=<?= urlencode($entreprise['siret']) ?>"
-                            class="btn btn-sm btn-success">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
-                        </a>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-sm btn-primary btn-voir-carte" data-idx="<?= $idx ?>"
+                                    <?= empty($entreprise['location']['lat']) ? 'disabled title="Localisation indisponible"' : '' ?>>
+                                    Voir sur la carte
+                                </button>
+                                <a href="export_csv.php?siret=<?= urlencode($entreprise['siret']) ?>"
+                                    class="btn btn-sm btn-success">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                                </a>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
-        </div>
         <?php else: ?>
-        <div class="alert alert-info">Aucune entreprise trouvée.</div>
+            <div class="alert alert-info">Aucune entreprise trouvée.</div>
         <?php endif; ?>
     </div>
 
@@ -100,24 +100,24 @@
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const entreprises =
-        <?= json_encode($this->resultats['items'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    const map = L.map('map').setView([<?= $this->latitude ?? 48.8566 ?>, <?= $this->longitude ?? 2.3522 ?>],
-        12);
+    document.addEventListener("DOMContentLoaded", function() {
+        const entreprises =
+            <?= json_encode($this->resultats['items'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        const map = L.map('map').setView([<?= $this->latitude ?? 48.8566 ?>, <?= $this->longitude ?? 2.3522 ?>],
+            12);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
 
-    const markers = L.markerClusterGroup();
-    const markerMap = {};
+        const markers = L.markerClusterGroup();
+        const markerMap = {};
 
-    entreprises.forEach((e, idx) => {
-        const lat = e.location?.lat;
-        const lon = e.location?.lon;
-        if (lat && lon) {
-            const marker = L.marker([lat, lon]).bindPopup(`
+        entreprises.forEach((e, idx) => {
+            const lat = e.location?.lat;
+            const lon = e.location?.lon;
+            if (lat && lon) {
+                const marker = L.marker([lat, lon]).bindPopup(`
                 <strong>${e.company_name || ''}</strong><br>
                 ${e.city || ''} (${e.postcode || ''})<br>
                 ${e.naf_label || ''} (${e.naf || ''})<br>
@@ -126,24 +126,24 @@ document.addEventListener("DOMContentLoaded", function() {
                 Haut potentiel: ${e.is_high_potential ? 'Oui' : 'Non'}<br>
                 Numéro Siret : ${e.siret}
             `);
-            markers.addLayer(marker);
-            markerMap[idx] = marker;
-        }
-    });
+                markers.addLayer(marker);
+                markerMap[idx] = marker;
+            }
+        });
 
-    map.addLayer(markers);
-    if (markers.getLayers().length) map.fitBounds(markers.getBounds());
+        map.addLayer(markers);
+        if (markers.getLayers().length) map.fitBounds(markers.getBounds());
 
-    // Boutons "Voir sur la carte"
-    document.querySelectorAll('.btn-voir-carte').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const idx = btn.dataset.idx;
-            const marker = markerMap[idx];
-            if (!marker) return;
-            markers.zoomToShowLayer(marker, () => {
-                marker.openPopup();
+        // Boutons "Voir sur la carte"
+        document.querySelectorAll('.btn-voir-carte').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = btn.dataset.idx;
+                const marker = markerMap[idx];
+                if (!marker) return;
+                markers.zoomToShowLayer(marker, () => {
+                    marker.openPopup();
+                });
             });
         });
     });
-});
 </script>

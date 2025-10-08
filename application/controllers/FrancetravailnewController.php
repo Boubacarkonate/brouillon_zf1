@@ -341,13 +341,19 @@ class FranceTravailnewController extends Zend_Controller_Action
     /** Liste et recherche de services */
     public function servicesAction()
     {
+
+
+
+
         $codeCommune = $this->_getParam('code_commune', '75120');
+
+
         $theme       = $this->_getParam('theme', null);
         $type        = $this->_getParam('type', null);
         $source      = $this->_getParam('source', null);
         $q           = $this->_getParam('q', null);
         $page        = max(1, (int)$this->_getParam('page', 1));
-        $perPage     = 1000;
+        $perPage     = 20;
         $themeValue = $this->_getParam('themeValue');
         $typeValue = $this->_getParam('typeValue');
 
@@ -393,7 +399,7 @@ class FranceTravailnewController extends Zend_Controller_Action
 
         try {
             // --- Recherche sans filtre pour récupérer toutes les thématiques/types/structures ---
-            $allServicesResp = $model->searchServices(['page' => 1, 'perPage' => $perPage]);
+            $allServicesResp = $model->searchServices(['page' =>  $page, 'perPage' => $perPage]);
             $allServices = $allServicesResp['items'] ?? [];
 
             $themes     = [];
@@ -440,7 +446,9 @@ class FranceTravailnewController extends Zend_Controller_Action
             // --- Recherche filtrée pour la vue ---
             $params = [
                 'page'    => $page,
-                'perPage' => 20,
+                'perPage' => $perPage,
+                'exclure_doublons' => true,
+                // 'score_qualite_minimum' => 1
             ];
 
             if ($codeCommune) $params['code_commune'] = $codeCommune;
@@ -450,6 +458,8 @@ class FranceTravailnewController extends Zend_Controller_Action
             if ($q)           $params['q']            = $q;
 
             $resp = $model->searchServices($params);
+            // var_dump($resp);
+            // exit;
 
             $services = [];
             $filteredStructures = [];
@@ -464,16 +474,23 @@ class FranceTravailnewController extends Zend_Controller_Action
                     'codePostal'  => $s['code_postal'] ?? null,
                     'telephone'   => $s['telephone'] ?? null,
                     'courriel'    => $s['courriel'] ?? null,
+                    'date_maj'    => $s['date_maj'] ?? null,
                     'theme'       => $s['thematiques'] ?? [],
                     'type'        => $s['type'] ?? null,
                     'adresse'     => $s['adresse'] ?? null,
                     'source'      => $s['source'] ?? null,
+                    'lien_source'      => $s['lien_source'] ?? null,
                     'lat'         => $s['latitude'] ?? null,
                     'lon'         => $s['longitude'] ?? null,
                     'commune'     => $s['commune'] ?? null,
                     'structure'   => $s['structure'] ?? null,
                     'distance'    => $s['distance'] ?? null,
                     'modes_accueil'    => $s['modes_accueil'] ?? null,
+                    'publics'    => $s['publics'] ?? null,
+                    'frais'    => $s['frais'] ?? null,
+                    'lien_mobilisation'    => $s['lien_mobilisation'] ?? null,
+                    'conditions_acces'    => $s['conditions_acces'] ?? null,
+
                 ];
 
                 // var_dump($services);
@@ -496,6 +513,10 @@ class FranceTravailnewController extends Zend_Controller_Action
                 }
             }
 
+            // $getserviceAdresse= $model->getServices();
+            //  var_dump($resp);
+            // exit;
+
             // --- Passage à la vue ---
             $this->view->thematique = $themesRecuperer;
             $this->view->typeValue = $typeValue;
@@ -503,6 +524,7 @@ class FranceTravailnewController extends Zend_Controller_Action
             $this->view->sourcesList = $sourcesRecuperer;
 
             $this->view->codeCommune = $codeCommune;
+
             $this->view->services    = $services;
             $this->view->structures  = $filteredStructures;
             $this->view->total       = $resp['total'] ?? count($services);
@@ -515,6 +537,7 @@ class FranceTravailnewController extends Zend_Controller_Action
             $this->view->themes      = $themes;
             $this->view->types       = $types;
             $this->view->sources     = $sources;
+            $this->view->params = $_GET; // <-- Ajouté pour éviter l'erreur array_merge
         } catch (Exception $e) {
             $this->view->error = $e->getMessage();
         }
@@ -1112,4 +1135,6 @@ class FranceTravailnewController extends Zend_Controller_Action
                 return "Valeur : " . $valeur;
         }
     }
+
+    public function dashboardAction() {}
 }

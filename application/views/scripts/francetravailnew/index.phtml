@@ -3,16 +3,73 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-<script src="https://code.jquery.com/jquery-3.7.1.js"></script>
-<!-- PAGE AVEC FILTRE, CARTE ET PAGINATION ---->
-<h1 class="mb-4 text-primary fw-bold">💼 Offres d'emploi France Travail</h1>
+
+<style>
+    .pagination-sticky {
+        position: sticky;
+        bottom: 0;
+        background-color: white;
+        padding: 0.5rem 0;
+        z-index: 10;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .col-md-3 .overflow-auto {
+        padding-bottom: 70px;
+        /* laisse de la place pour la pagination */
+    }
+
+    /* Popover personnalisé */
+    .blocpopover {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-height: 80vh;
+        width: 60%;
+        background-color: white;
+        z-index: 1050;
+        border-radius: 0.5rem;
+        overflow-y: auto;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        display: none;
+        /* caché par défaut */
+        padding: 1rem;
+    }
+
+    /* Fond semi-transparent */
+    #popover-background {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 1040;
+        display: none;
+    }
+
+    /* En-tête de la modal */
+    .blocpopover .popover-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #6c757d;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    /* Tabs Bootstrap */
+    .blocpopover .nav-tabs {
+        margin-bottom: 1rem;
+    }
+</style>
 
 
 <!-- Filtres modernisés qui tiennent sur une ligne-->
 <div class="card shadow-sm mb-4 border-0">
-    <div class="card-header bg-light fw-bold text-primary">
-        <i class="bi bi-funnel-fill"></i> Filtres de recherche
-    </div>
+
     <div class="card-body">
         <form method="get" class="d-flex flex-nowrap align-items-end gap-3 overflow-auto">
 
@@ -71,8 +128,8 @@
             <?php endforeach; ?>
 
             <div class="d-grid" style="min-width:150px;">
-                <button type="submit" class="btn btn-primary shadow-sm">
-                    <i class="bi bi-funnel"></i> Filtrer
+                <button type="submit" class="btn btn-secondary shadow-sm">
+                    <i class="bi bi-funnel"></i> Rechercher
                 </button>
             </div>
         </form>
@@ -84,144 +141,177 @@
 
 <div class="row">
     <!-- Offres -->
-    <div class="col-md-3">
+    <div class="col-md-3 position-relative" style="max-height:80vh">
         <?php if (!empty($this->offres)): ?>
             <div class="d-flex flex-column gap-3 overflow-auto" style="max-height:80vh;">
                 <?php foreach ($this->offres as $idx => $offre): ?>
+                    <?php
+                    $desc = $offre['description'] ?? '';
+                    $descTronquee = strlen($desc) > 120 ? substr($desc, 0, 120) . '...' : $desc;
+                    ?>
                     <div class="card shadow-sm" data-offre-idx="<?= $idx ?>">
                         <div class="card-body d-flex justify-content-between">
                             <div>
                                 <h5 class="card-title text-primary"><?= $this->escape($offre['intitule'] ?? '') ?></h5>
-                                <?php
-                                $desc = $offre['description'] ?? '';
-                                $descTronquee = strlen($desc) > 120 ? substr($desc, 0, 120) . '...' : $desc;
-                                ?>
                                 <p class="card-text small text-muted">
                                     <?= $this->escape($descTronquee) ?>
                                     <?php if (strlen($desc) > 120): ?>
-                                        <button type="button" class="btn btn-link p-0" data-bs-toggle="modal"
-                                            data-bs-target="#descModal" data-offre-idx="<?= $idx ?>">
-                                            Voir plus
+                                        <button type="button" class="btn btn-link btn-sm p-0 lire-suite-btn"
+                                            data-offre-idx="<?= $idx ?>">
+                                            Lire la suite
                                         </button>
                                     <?php endif; ?>
                                 </p>
-                                <div class="d-flex flex-wrap gap-2">
+
+                                <!-- Popover personnalisé avec onglets -->
+                                <!-- Popover personnalisé avec onglets -->
+                                <div id="customPopover-<?= $idx ?>" class="blocpopover">
+                                    <div class="popover-header">
+                                        <span>Détails de l'offre</span>
+                                        <button type="button" class="btn-close btn-close-white fermer-popover"></button>
+                                    </div>
+                                    <div class="p-3">
+                                        <!-- Onglets Infos / Description -->
+                                        <ul class="nav nav-tabs" id="offreTabs-<?= $idx ?>" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="infos-tab-<?= $idx ?>" data-bs-toggle="tab"
+                                                    data-bs-target="#infos-<?= $idx ?>" type="button" role="tab">Infos</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="desc-tab-<?= $idx ?>" data-bs-toggle="tab"
+                                                    data-bs-target="#desc-<?= $idx ?>" type="button"
+                                                    role="tab">Description</button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content border p-3">
+                                            <!-- Onglet Infos -->
+                                            <div class="tab-pane fade show active" id="infos-<?= $idx ?>" role="tabpanel"
+                                                aria-labelledby="infos-tab-<?= $idx ?>">
+                                                <h5 class="text-primary">
+                                                    <?= $this->escape($offre['intitule'] ?? 'Sans intitulé') ?></h5>
+                                                <p><strong>Entreprise :</strong>
+                                                    <?= $this->escape($offre['entreprise']['nom'] ?? 'N/A') ?></p>
+                                                <p><strong>Lieu :</strong>
+                                                    <?= $this->escape($offre['lieuTravail']['libelle'] ?? 'N/A') ?></p>
+                                                <p><strong>Type de contrat :</strong>
+                                                    <?= $this->escape($offre['typeContrat'] ?? 'N/A') ?></p>
+                                                <p><strong>Expérience :</strong>
+                                                    <?= $this->escape($offre['experience'] ?? 'N/A') ?> |
+                                                    <strong>Qualification :</strong>
+                                                    <?= $this->escape($offre['qualification'] ?? 'N/A') ?>
+                                                </p>
+                                                <p><strong>Publié :</strong>
+                                                    <?= !empty($offre['dateCreation']) ? date('d/m/Y', strtotime($offre['dateCreation'])) : 'N/A' ?>
+                                                    |
+                                                    <strong>Actualisé :</strong>
+                                                    <?= !empty($offre['dateActualisation']) ? date('d/m/Y', strtotime($offre['dateActualisation'])) : 'N/A' ?>
+                                                </p>
+                                                <a href="<?= $this->escape($offre['origineOffre']['urlOrigine'] ?? '#') ?>"
+                                                    target="_blank" class="btn btn-primary btn-sm">Voir l'offre originale</a>
+                                            </div>
+
+                                            <!-- Onglet Description -->
+                                            <div class="tab-pane fade" id="desc-<?= $idx ?>" role="tabpanel"
+                                                aria-labelledby="desc-tab-<?= $idx ?>">
+                                                <h6>Description du poste</h6>
+                                                <p><?= nl2br($this->escape($offre['description'] ?? 'Pas de description')) ?>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+
+                                <!-- Badges infos -->
+                                <div class="d-flex flex-wrap gap-2 mt-2">
                                     <span
-                                        class="badge bg-info"><?= $this->escape($offre['entreprise']['nom'] ?? 'Entreprise inconnue') ?></span>
+                                        class="badge bg-primary"><?= $this->escape($offre['entreprise']['nom'] ?? 'Entreprise inconnue') ?></span>
                                     <span
                                         class="badge bg-secondary"><?= $this->escape($offre['lieuTravail']['libelle'] ?? 'Lieu inconnu') ?></span>
                                     <span
                                         class="badge bg-success"><?= $this->escape($offre['typeContrat'] ?? 'Contrat N/A') ?></span>
                                 </div>
                             </div>
+
                             <div class="d-flex flex-column gap-2">
-                                <a href="<?= $this->escape($offre['origineOffre']['urlOrigine'] ?? '#') ?>" target="_blank"
-                                    class="btn btn-outline-primary btn-sm">
-                                    Voir
-                                </a>
-                                <button type="button" class="btn btn-success btn-sm btn-enregistrer"
-                                    data-id="<?= $offre['id'] ?? '' ?>"
+                                <!-- Bouton Enregistrer -->
+                                <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer"
+                                    title="Enregistrer l'offre" data-id="<?= $offre['id'] ?? '' ?>"
                                     data-intitule="<?= htmlspecialchars($offre['intitule'] ?? '') ?>"
-                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>">
-                                    Enregistrer
+                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>"
+                                    data-dateactualisation="<?= htmlspecialchars($offre['dateActualisation'] ?? '') ?>">
+                                    <i class="fa-solid fa-floppy-disk"></i>
                                 </button>
-                                <!-- Ajoute un bouton "Voir sur la carte" pour chaque offre -->
-                                <?php
-                                $hasCoords = !empty($offre['lieuTravail']['latitude']) && !empty($offre['lieuTravail']['longitude']);
-                                ?>
+
+                                <!-- Bouton Voir sur la carte -->
+                                <?php $hasCoords = !empty($offre['lieuTravail']['latitude']) && !empty($offre['lieuTravail']['longitude']); ?>
                                 <button type="button"
-                                    class="btn btn-primary btn-sm btn-voir-carte <?= $hasCoords ? '' : 'disabled' ?>"
-                                    <?= $hasCoords ? "data-offre-idx=\"$idx\"" : '' ?>>
-                                    Voir sur la carte
+                                    class="btn btn-outline-secondary btn-sm btn-voir-carte <?= $hasCoords ? '' : 'disabled' ?>"
+                                    title="Voir sur la carte" <?= $hasCoords ? "data-offre-idx=\"$idx\"" : '' ?>>
+                                    <i class="fa-solid fa-location-dot"></i>
                                 </button>
 
-                                <!-- Bouton mail-->
-                                <button>mail
-
-                                </button>
-
-
+                                <!-- Lien France Travail -->
+                                <?php $url = $this->escape($offre['origineOffre']['urlOrigine'] ?? '#'); ?>
+                                <a href="<?= $url ?>" target="_blank" title="Voir l'offre originale"
+                                    class="btn btn-outline-secondary btn-sm d-flex flex-column align-items-center justify-content-center"
+                                    style="min-width:50px; line-height:1.1;">
+                                    <span class="small">France</span>
+                                    <span class="small">Travail</span>
+                                </a>
                             </div>
                         </div>
-                    </div>
-                <?php endforeach; ?>
+                    </div> <?php endforeach; ?>
             </div>
+            <!-- Pagination-->
+            <?php
+            $currentPage = $this->page;
+            $params = $this->params;
+            $perPage = $this->perPage;
+            $offresCount = count($this->offres ?? []);
+
+            $hasNextPage = $offresCount === $perPage;
+
+            $window = 2;
+
+            // Pages à afficher
+            $pages = [];
+            for ($i = max(0, $currentPage - $window); $i <= $currentPage + $window; $i++) {
+                if ($i === $currentPage + 1 && !$hasNextPage) break;
+                $pages[] = $i;
+            }
+            ?>
+
+            <nav aria-label="Pagination" class="pagination-sticky">
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item <?= ($currentPage <= 0) ? 'disabled' : '' ?>">
+                        <a class="page-link"
+                            href="<?= ($currentPage > 0) ? '?' . http_build_query(array_merge($params, ['page' => $currentPage - 1])) : '#' ?>">
+                            &laquo; Précédent
+                        </a>
+                    </li>
+                    <?php foreach ($pages as $i): ?>
+                        <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
+                            <a class="page-link"
+                                href="<?= ($i === $currentPage) ? '#' : '?' . http_build_query(array_merge($params, ['page' => $i])) ?>">
+                                <?= $i + 1 ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                    <li class="page-item <?= !$hasNextPage ? 'disabled' : '' ?>">
+                        <a class="page-link"
+                            href="<?= $hasNextPage ? '?' . http_build_query(array_merge($params, ['page' => $currentPage + 1])) : '#' ?>">
+                            Suivant &raquo;
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
         <?php else: ?>
             <div class="alert alert-info">Aucune offre trouvée.</div>
         <?php endif; ?>
-
-        <?php
-        $currentPage = $this->page;
-        $params = $this->params;
-        $perPage = $this->perPage;
-        $offresCount = count($this->offres ?? []);
-
-        // On considère qu'il y a une page suivante uniquement si la page actuelle est pleine
-        $hasNextPage = $offresCount === $perPage;
-
-        // Taille de la fenêtre autour de la page actuelle
-        $window = 2;
-
-        // Pages à afficher
-        $pages = [];
-        for ($i = max(0, $currentPage - $window); $i <= $currentPage + $window; $i++) {
-            // Si c'est la page suivante mais qu'il n'y a pas de résultats, on ne l'affiche pas
-            if ($i === $currentPage + 1 && !$hasNextPage) break;
-            $pages[] = $i;
-        }
-        ?>
-
-        <nav aria-label="Pagination">
-            <ul class="pagination">
-                <!-- Previous -->
-                <li class="page-item <?= ($currentPage <= 0) ? 'disabled' : '' ?>">
-                    <a class="page-link"
-                        href="<?= ($currentPage > 0) ? '?' . http_build_query(array_merge($params, ['page' => $currentPage - 1])) : '#' ?>">
-                        << </a>
-                </li>
-
-                <!-- Pages -->
-                <?php foreach ($pages as $i): ?>
-                    <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>"
-                        <?= ($i === $currentPage) ? 'aria-current="page"' : '' ?>>
-                        <a class="page-link"
-                            href="<?= ($i === $currentPage) ? '#' : '?' . http_build_query(array_merge($params, ['page' => $i])) ?>">
-                            <?= $i + 1 ?>
-                        </a>
-                    </li>
-                <?php endforeach; ?>
-
-                <!-- Next -->
-                <li class="page-item <?= !$hasNextPage ? 'disabled' : '' ?>">
-                    <a class="page-link"
-                        href="<?= $hasNextPage ? '?' . http_build_query(array_merge($params, ['page' => $currentPage + 1])) : '#' ?>">>></a>
-                </li>
-            </ul>
-        </nav>
-
-
-
-
-        <!-- Pagination sans numéro de page + ajuster la variable hasNextPage dans le controller-->
-        <!-- <nav aria-label="Pagination">
-    <ul class="pagination">
-        <li class="page-item <?= ($this->page <= 0) ? 'disabled' : '' ?>">
-            <a class="page-link"
-                href="?<?= http_build_query(array_merge($this->params, ['page' => $this->page - 1])) ?>">
-                ← Précédent
-            </a>
-        </li>
-
-        <li class="page-item <?= (!$this->hasNextPage) ? 'disabled' : '' ?>">
-            <a class="page-link"
-                href="?<?= http_build_query(array_merge($this->params, ['page' => $this->page + 1])) ?>">
-                Suivant →
-            </a>
-        </li>
-    </ul>
-</nav> -->
-
-
     </div>
 
     <!-- Carte -->
@@ -234,39 +324,14 @@
     </div>
 </div>
 
-<!-- Modal Bootstrap modernisé -->
-<div class="modal fade" id="descModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">Détails de l'offre</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Fermer"></button>
-            </div>
-            <div class="modal-body">
-                <ul class="nav nav-tabs" id="descTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="infos-tab" data-bs-toggle="tab" data-bs-target="#infos"
-                            type="button" role="tab">Infos</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="description-tab" data-bs-toggle="tab" data-bs-target="#description"
-                            type="button" role="tab">Description</button>
-                    </li>
-                </ul>
-                <div class="tab-content pt-3">
-                    <div class="tab-pane fade show active" id="infos" role="tabpanel"></div>
-                    <div class="tab-pane fade" id="description" role="tabpanel"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
     const offresData = <?= json_encode($this->offres ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-
+    const K = <?= json_encode($this->K) ?>;
     document.addEventListener("DOMContentLoaded", function() {
+
+        console.log(K);
+
         console.log('nombre offres reçus : ', offresData);
 
 
@@ -361,38 +426,76 @@
         }
 
 
-        // Injection contenu modal reste inchangée
-        const descModal = document.getElementById('descModal');
-        descModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const idx = button.getAttribute('data-offre-idx');
-            const offre = offresData[idx];
-            if (!offre) return;
 
-            document.querySelector('#infos').innerHTML = `
-            <h5>${offre.intitule || 'Sans intitulé'}</h5>
-            <p><strong>Entreprise :</strong> ${offre.entreprise?.nom || 'N/A'}</p>
-            <p><strong>Lieu :</strong> ${offre.lieuTravail?.libelle || 'N/A'}</p>
-            <p><strong>Type de contrat :</strong> ${offre.typeContrat || 'N/A'}</p>
-            <p><strong>Expérience :</strong> ${offre.experience || 'N/A'} |
-            <strong>Qualification :</strong> ${offre.qualification || 'N/A'}</p>
-            <p><strong>Publié :</strong> ${offre.dateCreation ? new Date(offre.dateCreation).toLocaleDateString('fr-FR') : 'N/A'} |
-            <strong>Actualisé :</strong> ${offre.dateActualisation ? new Date(offre.dateActualisation).toLocaleDateString('fr-FR') : 'N/A'}</p>
-        `;
+        // Ouvrir la modal
+        let bg = document.getElementById('popover-background');
+        if (!bg) {
+            bg = document.createElement('div');
+            bg.id = 'popover-background';
+            document.body.appendChild(bg);
+        }
 
-            document.querySelector('#description').innerHTML = `
-            <p>${offre.description || 'Pas de description'}</p>
-            <a href="${offre.origineOffre?.urlOrigine || '#'}" target="_blank" class="btn btn-primary btn-sm">Voir l'offre originale</a>
-        `;
+        // Ouvrir la modal
+        document.querySelectorAll('.lire-suite-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = btn.dataset.offreIdx;
+                const popover = document.getElementById(`customPopover-${idx}`);
+                if (!popover) return;
+                popover.style.display = 'block';
+                bg.style.display = 'block';
+            });
         });
+
+        // Fermer la modal
+        document.querySelectorAll('.fermer-popover').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const popover = btn.closest('.blocpopover');
+                if (popover) popover.style.display = 'none';
+                bg.style.display = 'none';
+            });
+        });
+
+        // Fermer en cliquant sur le fond
+        bg.addEventListener('click', () => {
+            document.querySelectorAll('.blocpopover').forEach(p => p.style.display = 'none');
+            bg.style.display = 'none';
+        });
+
+
     });
 
-    /*
-        mettre une icone sur la commu
-    ne de selection ?
-    si je clique sur voir la carte, je pourrais faire l'inverse
-    ameliorer l'interface 
+    $(document).ready(function() {
+        $(document).on('click', '.btn-enregistrer', function() {
+            const btn = $(this);
 
-    - ajouter le nombre d'offres au-dessus de la pagination + le nombre d'offr
-        */
+            const offre = {
+                id: btn.data('id'),
+                intitule: btn.data('intitule'),
+                url: btn.data('url'),
+                dateActualisation: btn.data('dateactualisation'),
+                K: K // important !
+            };
+            console.log(offre);
+
+
+            $.ajax({
+                url: '/francetravail/enregistreroffre',
+                method: 'POST',
+                dataType: 'json',
+                data: offre,
+                success: function(res) {
+                    if (res.success) {
+                        alert("✅ Offre enregistrée !");
+                    } else {
+                        alert("❌ Erreur : " + (res.message ||
+                            "Impossible d'enregistrer l'offre"));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Erreur AJAX :", status, error, xhr.responseText);
+                    alert("⚠️ Erreur réseau (" + status + ")");
+                }
+            });
+        });
+    });
 </script>

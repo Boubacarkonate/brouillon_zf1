@@ -6,12 +6,12 @@
 
 <style>
     .pagination-sticky {
-        position: sticky;
+        /* position: sticky;
         bottom: 0;
         background-color: white;
         padding: 0.5rem 0;
         z-index: 10;
-        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); */
     }
 
     .col-md-3 .overflow-auto {
@@ -60,21 +60,24 @@
     }
 </style>
 
-<!-- Filtres modernes -->
+<!-- 🔍 Filtres modernisés -->
 <div class="card shadow-sm mb-4 border-0">
     <div class="card-body">
         <form method="get" class="d-flex flex-nowrap align-items-end gap-3 overflow-auto">
-            <div style="min-width:180px;">
-                <label class="form-label text-muted">Code commune (INSEE)</label>
-                <input type="text" name="code_commune" class="form-control shadow-sm"
-                    value="<?= $this->escape($this->codeCommune) ?>" placeholder="Ex : 75120">
-            </div>
 
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Code commune</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
+                    <input type="text" name="code_commune" class="form-control border-start-0"
+                        value="<?= $this->escape($this->codeCommune) ?>" placeholder="Ex : 75120">
+                </div>
+            </div>
 
             <div style="min-width:180px;">
                 <label class="form-label text-muted">Thématique</label>
                 <select name="theme" class="form-select shadow-sm">
-                    <option value="">Toutes thématiques</option>
+                    <option value="">Toutes</option>
                     <?php foreach ($this->thematique as $value => $label): ?>
                         <option value="<?= $this->escape($value) ?>" <?= ($this->themeValue == $value ? 'selected' : '') ?>>
                             <?= $this->escape($label) ?>
@@ -83,13 +86,10 @@
                 </select>
             </div>
 
-
-
-
             <div style="min-width:180px;">
                 <label class="form-label text-muted">Type</label>
                 <select name="type" class="form-select shadow-sm">
-                    <option value="">Tous types</option>
+                    <option value="">Tous</option>
                     <?php foreach ($this->allTypes as $value => $label): ?>
                         <option value="<?= $this->escape($value) ?>" <?= ($this->typeValue == $value ? 'selected' : '') ?>>
                             <?= $this->escape($label) ?>
@@ -101,7 +101,7 @@
             <div style="min-width:180px;">
                 <label class="form-label text-muted">Source</label>
                 <select name="source" class="form-select shadow-sm">
-                    <option value="">Toutes sources</option>
+                    <option value="">Toutes</option>
                     <?php foreach ($this->sourcesList as $slug => $nom): ?>
                         <option value="<?= $this->escape($slug) ?>" <?= ($this->source == $slug ? 'selected' : '') ?>>
                             <?= $this->escape($nom) ?>
@@ -110,14 +110,17 @@
                 </select>
             </div>
 
-
-            <div style="min-width:220px;">
+            <div style="min-width:200px;">
                 <label class="form-label text-muted">Mot-clé</label>
-                <input type="text" name="q" class="form-control shadow-sm" value="<?= $this->escape($this->q) ?>">
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0"
+                        value="<?= $this->escape($this->q) ?>" placeholder="Rechercher...">
+                </div>
             </div>
 
             <div class="d-grid" style="min-width:150px;">
-                <button type="submit" class="btn btn-secondary shadow-sm">
+                <button id="enregistrer" type="submit" class="btn btn-secondary shadow-sm">
                     <i class="bi bi-funnel"></i> Rechercher
                 </button>
             </div>
@@ -125,39 +128,36 @@
     </div>
 </div>
 
+<!-- 🗂 Liste + Carte -->
 <div class="row">
-    <!-- Liste services -->
-    <div class="col-md-3 position-relative" style="max-height:80vh;">
+    <div class="col-md-3 d-flex flex-column position-relative" style="max-height:80vh;">
         <?php if (!empty($this->services)): ?>
-            <div class="d-flex flex-column gap-3 overflow-auto" style="max-height:80vh;">
-                <?php foreach ($this->services as $idx => $s):
-                    $desc = $s['description'] ?? '';
+            <div class="d-flex flex-column gap-3 pb-0 overflow-auto" style="max-height:80vh;">
+                <?php foreach ($this->services as $idx => $s): ?>
+                    <?php
+                    $desc = $s['structure']['description'] ?? '';
                     $descTronquee = strlen($desc) > 120 ? substr($desc, 0, 120) . '...' : $desc;
-                ?>
+                    ?>
                     <div class="card shadow-sm" data-service-idx="<?= $idx ?>">
                         <div class="card-body d-flex justify-content-between">
                             <div>
-                                <h5 class="card-title text-primary"><?= $this->escape($s['label'] ?? '') ?></h5>
-                                <p class="card-text small text-muted"><?= $this->escape($descTronquee) ?>
+                                <h5 class="card-title text-primary"><?= $this->escape($s['structure']['nom'] ?? '') ?></h5>
+                                <p class="card-text small text-muted">
+                                    <?= $this->escape($descTronquee) ?>
                                     <?php if (strlen($desc) > 120): ?>
                                         <button type="button" class="btn btn-link btn-sm p-0 lire-suite-btn"
                                             data-service-idx="<?= $idx ?>">Lire la suite</button>
                                     <?php endif; ?>
                                 </p>
-                                <div>
-                                    <?php foreach ($s['modes_accueil'] as $key) : ?>
-                                        <p><?= $key ?></p>
-                                    <?php endforeach ?>
 
-                                </div>
-                                <p><?= $s['distance'] ?></p>
-                                <p><?= $s['structure']['code_postal'] ?></p>
-                                <p><?= $s['structure']['commune'] ?></p>
                                 <div class="d-flex flex-wrap gap-2 mt-2">
                                     <?php if (!empty($s['theme'])): ?>
                                         <?php foreach ($s['theme'] as $t): ?>
-                                            <span class="badge bg-secondary"><?= $this->escape($t) ?></span>
                                         <?php endforeach; ?>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($s['frais'])): ?>
+                                        <span class="badge bg-success"><?= $this->escape($s['frais']) ?></span>
                                     <?php endif; ?>
                                     <?php if (!empty($s['type'])): ?>
                                         <span class="badge bg-success"><?= $this->escape($s['type']) ?></span>
@@ -166,10 +166,25 @@
                                         <span class="badge bg-info"><?= $this->escape($s['source']) ?></span>
                                     <?php endif; ?>
                                 </div>
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    <?php if (!empty($s['adresse'])): ?>
+                                        <span
+                                            class="badge bg-success"><?= $this->escape($s['structure']['adresse']) . ' ' . $this->escape($s['structure']['code_postal'])  ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column gap-2">
+                                <?php $hasCoords = !empty($s['lat']) && !empty($s['lon']); ?>
+                                <button type="button"
+                                    class="btn btn-outline-secondary btn-sm voir-carte-btn <?= $hasCoords ? '' : 'disabled' ?>"
+                                    title="Voir sur la carte" data-service-idx="<?= $idx ?>">
+                                    carte
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Popover détails -->
+                        <!-- Modal détails -->
                         <div id="customPopover-<?= $idx ?>" class="blocpopover">
                             <div class="popover-header">
                                 <span>Détails du service</span>
@@ -189,35 +204,79 @@
 
                                 <div class="tab-content border p-3">
                                     <div class="tab-pane fade show active" id="infos-<?= $idx ?>">
-                                        <h5 class="text-primary"><?= $this->escape($s['label'] ?? '') ?></h5>
-                                        <p><strong>Adresse :</strong> <?= $this->escape($s['adresse'] ?? 'N/A') ?></p>
-                                        <p><strong>Commune :</strong> <?= $this->escape($s['commune'] ?? 'N/A') ?></p>
-                                        <p><strong>Téléphone :</strong> <?= $this->escape($s['telephone'] ?? 'N/A') ?></p>
-                                        <p><strong>Courriel :</strong> <?= $this->escape($s['courriel'] ?? 'N/A') ?></p>
+                                        <p><strong>Adresse :</strong> <?= $this->escape($s['structure']['adresse'] ?? 'N/A') ?>
+                                        </p>
+                                        <p><strong>Commune :</strong> <?= $this->escape($s['structure']['commune'] ?? 'N/A') ?>
+                                        </p>
+                                        <p><strong>Téléphone :</strong>
+                                            <?= $this->escape($s['structure']['telephone'] ?? 'N/A') ?></p>
+                                        <p><strong>Courriel :</strong>
+                                            <?= $this->escape($s['structure']['courriel'] ?? 'N/A') ?></p>
+                                        <p><strong>Site web :</strong>
+                                            <?= $this->escape($s['structure']['site_web'] ?? 'N/A') ?></p>
                                     </div>
                                     <div class="tab-pane fade" id="desc-<?= $idx ?>">
-                                        <p><?= nl2br($this->escape($s['description'] ?? 'Pas de description')) ?></p>
+                                        <p><?= nl2br($this->escape($s['structure']['description'] ?? 'Pas de description')) ?>
+                                        </p>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        <!-- Bouton Voir sur la carte -->
-                        <div class="d-flex gap-2 mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-primary voir-carte-btn"
-                                data-service-idx="<?= $idx ?>">
-                                Voir sur la carte
-                            </button>
-                        </div>
-
                     </div>
                 <?php endforeach; ?>
             </div>
+
+            <!-- Pagination-->
+            <?php
+            $currentPage = $this->page;
+            $params = $this->params;
+            $perPage = $this->perPage;
+            $offresCount = count($this->services ?? []);
+
+            $hasNextPage = $offresCount === $perPage;
+
+            $window = 2;
+
+
+            // Pages à afficher
+            $pages = [];
+            for ($i = max(0, $currentPage - $window); $i <= $currentPage + $window; $i++) {
+                if ($i === $currentPage + 1 && !$hasNextPage) break;
+                $pages[] = $i;
+            }
+            ?>
+
+            <nav aria-label="Pagination" class="position-sticky bottom-0">
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item <?= ($currentPage <= 0) ? 'disabled' : '' ?>">
+                        <a class="page-link"
+                            href="<?= ($currentPage > 0) ? '?' . http_build_query(array_merge($params, ['page' => $currentPage - 1])) : '#' ?>">
+                            &laquo; Précédent
+                        </a>
+                    </li>
+                    <?php foreach ($pages as $i): ?>
+                        <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
+                            <a class="page-link"
+                                href="<?= ($i === $currentPage) ? '#' : '?' . http_build_query(array_merge($params, ['page' => $i])) ?>">
+                                <?= $i + 1 ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
+                    <li class="page-item <?= !$hasNextPage ? 'disabled' : '' ?>">
+                        <a class="page-link"
+                            href="<?= $hasNextPage ? '?' . http_build_query(array_merge($params, ['page' => $currentPage + 1])) : '#' ?>">
+                            Suivant &raquo;
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+
         <?php else: ?>
-            <div class="alert alert-info">Aucun service trouvé</div>
+            <div class="alert alert-info">Aucun service trouvé.</div>
         <?php endif; ?>
     </div>
 
-    <!-- Carte -->
     <div class="col-md-9">
         <div class="card shadow-sm">
             <div class="card-body p-0">
@@ -231,61 +290,45 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const servicesData = <?= json_encode($this->services, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-        console.log(servicesData);
-
-        // Initialisation de la carte
-        const map = L.map("map").setView([48.8566, 2.3522], 11);
+        const services = <?= json_encode($this->services ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        const map = L.map("map").setView([46.5, 2.5], 6);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
         const markers = L.markerClusterGroup();
         const markerMap = {};
 
-        servicesData.forEach((s, idx) => {
-            // Priorité : coordonnées du service > coordonnées de la structure
+        services.forEach((s, idx) => {
             const lat = s.lat ?? s.structure?.lat ?? null;
             const lon = s.lon ?? s.structure?.lon ?? null;
-
             if (lat && lon) {
-                const marker = L.marker([lat, lon])
-                    .bindPopup(`
-                    <strong>${s.label || ''}</strong><br>
-                    ${s.adresse || s.structure?.address || ''}
-                    <br>${s.structure?.commune || ''}
-                `);
+                const marker = L.marker([lat, lon]).bindPopup(
+                    `<strong>${s.label}</strong><br>${s.structure?.adresse ?? ''}<br>${s.structure?.commune ?? ''}`
+                );
                 markers.addLayer(marker);
                 markerMap[idx] = marker;
             }
         });
 
         map.addLayer(markers);
+        if (markers.getLayers().length) map.fitBounds(markers.getBounds());
 
-        if (markers.getLayers().length) {
-            map.fitBounds(markers.getBounds());
-        }
-
-        // Bouton "Voir sur la carte"
         document.querySelectorAll('.voir-carte-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const idx = btn.dataset.serviceIdx;
                 const marker = markerMap[idx];
                 if (marker) {
-                    map.setView(marker.getLatLng(), 15, {
-                        animate: true
-                    }); // centre la carte
-                    marker.openPopup(); // ouvre le popup du marker
+                    markers.zoomToShowLayer(marker, () => marker.openPopup());
                 }
             });
         });
 
-        // Popover "Lire la suite"
         const bg = document.getElementById('popover-background');
         document.querySelectorAll('.lire-suite-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const idx = btn.dataset.serviceIdx;
-                const popover = document.getElementById(`customPopover-${idx}`);
-                if (popover) {
-                    popover.style.display = 'block';
+                const pop = document.getElementById(`customPopover-${idx}`);
+                if (pop) {
+                    pop.style.display = 'block';
                     bg.style.display = 'block';
                 }
             });
@@ -293,8 +336,8 @@
 
         document.querySelectorAll('.fermer-popover').forEach(btn => {
             btn.addEventListener('click', () => {
-                const popover = btn.closest('.blocpopover');
-                if (popover) popover.style.display = 'none';
+                const pop = btn.closest('.blocpopover');
+                if (pop) pop.style.display = 'none';
                 bg.style.display = 'none';
             });
         });

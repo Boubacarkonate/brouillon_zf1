@@ -38,8 +38,11 @@ class Application_Model_Datainclusion
     public function searchServices(array $params = [])
     {
         // Pagination par défaut
-        $params['perPage'] = $params['perPage'] ?? 20;
+        $params['size'] = $params['perPage'] ?? 20;
         $params['page']    = $params['page'] ?? 1;
+
+
+        unset($params['perPage']);
 
         // Limiter aux champs utiles pour ne pas exploser la mémoire
         $params['fields'] = 'id,nom,adresse,thematiques,type,source,lat,lon';
@@ -52,8 +55,14 @@ class Application_Model_Datainclusion
         return $this->callApi('/api/v1/sources');
     }
 
+    public function getServices($params)
+    {
+        $params['code_postal'] = $params['code_postal'] ?? 75020;
+        return $this->callApi('/api/v1/services', $params);
+    }
 
-    /** Détail d’un service par id */
+
+    /**  */
     public function getRefThematique()
     {
         $data = $this->callApi('/api/v1/doc/thematiques');
@@ -66,7 +75,7 @@ class Application_Model_Datainclusion
             }
         }
 
-        ksort($themes); // tri alphabétique optionnel
+        ksort($themes); // tri alphabétique 
         return $themes;
     }
 }
