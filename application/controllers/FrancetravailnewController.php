@@ -147,8 +147,8 @@ class FranceTravailnewController extends Zend_Controller_Action
                 'module'    => $data['module'] ?? 'inconnu', // 👈 ici
                 'libelle'             => $data['libelle'],
                 'url'               => $data['url'] ?? null,
-                'latitude'  => $data['latitude'] ?? null,
-                'longitude' => $data['longitude'] ?? null,
+                'latitude'  => $data['latitude'] ?? $data['lat'] ?? null,
+                'longitude' => $data['longitude'] ?? $data['lon']  ?? null,
                 'date'              => new Zend_Db_Expr('NOW()')
             ];
 
@@ -1155,6 +1155,7 @@ class FranceTravailnewController extends Zend_Controller_Action
         $offres = $model->getAll();  //recuperation des offres
         $metiers = $model->getAllMetiers();  //recuperation des metiers
         $services = $model->getAllServices();  //recuperation des services
+        $entreprises = $model->getAllEntreprises();  //recuperation des entreprise
 
         $totalOffre = $model->totalOffres(); //recuperation du total des offres
         $totalServices = $model->totalServices(); //recuperation du total des services
@@ -1166,6 +1167,7 @@ class FranceTravailnewController extends Zend_Controller_Action
         $this->view->totalMetiers = $totalMetiers;
 
         $this->view->metiers = $metiers;
+        $this->view->entreprises = $entreprises;
         $this->view->services = $services;
         $this->view->offres = $offres;
     }

@@ -30,12 +30,19 @@
     <div class="row">
         <!-- gauche : filtres -->
         <div class="col-md-3">
-            <div class="card p-3 mb-3">
+            <!-- <div class="card p-3 mb-3">
                 <h5>Filtres</h5>
                 <label class="form-label">Ville</label>
                 <input type="text" class="form-control" value="Paris">
                 <label class="form-label mt-2">Code ROME</label>
                 <input type="text" class="form-control" value="M1607">
+            </div> -->
+            <div class="card p-2 mb-2">
+                <h5>Projets</h5>
+                <p>Projet 1</p>
+                <p>Projet 2</p>
+                <p>Projet 3</p>
+
             </div>
             <div class="card p-2 mb-2">
                 <h5>Liens</h5>
@@ -65,95 +72,102 @@
                         data-bs-target="#tab-competences">Compétences</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
                         data-bs-target="#tab-services">Services</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
-                        data-bs-target="#tab-marche">Marché</button></li>
+                <!-- <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-marche">Marché</button></li> -->
             </ul>
 
             <div class="tab-content mt-2">
                 <!-- Offres -->
                 <div class="tab-pane show active p-3" id="tab-offres">
                     <?php if (!empty($this->offres)): ?>
-                        <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->offres as $offre): ?>
-                                <div class="list-group-item">
-                                    <strong><?= $this->escape($offre['libelle']) ?></strong>
-                                    <small class="text-muted small">
-                                        Actualisée le
-                                        <?= date('d/m/Y', strtotime($this->escape($offre['date']))) ?>
-                                    </small><br>
-                                    <a href="<?= $this->escape($offre['url']) ?>" target="_blank" class="small text-primary">
-                                        Voir l'offre
-                                    </a>
-                                </div>
-                            <?php endforeach; ?>
+                    <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                        <?php foreach ($this->offres as $offre): ?>
+                        <div class="list-group-item">
+                            <strong><?= $this->escape($offre['libelle']) ?></strong>
+                            <small class="text-muted small">
+                                Actualisée le
+                                <?= date('d/m/Y', strtotime($this->escape($offre['date']))) ?>
+                            </small><br>
+                            <a href="<?= $this->escape($offre['url']) ?>" target="_blank" class="small text-primary">
+                                Voir l'offre
+                            </a>
                         </div>
+                        <?php endforeach; ?>
+                    </div>
                     <?php else: ?>
-                        <div class="text-muted small">Aucune offre disponible.</div>
+                    <div class="text-muted small">Aucune offre disponible.</div>
                     <?php endif; ?>
                 </div>
 
 
                 <!-- Entreprises -->
                 <div class="tab-pane p-3" id="tab-entreprises">
-                    <ul class="list-group">
-                        <li class="list-group-item">Entreprise A - Paris - 50 salariés</li>
-                        <li class="list-group-item">Entreprise B - Lyon - 20 salariés</li>
-                        <li class="list-group-item">Entreprise C - Marseille - 100 salariés</li>
-                    </ul>
+                    <?php if (!empty($this->entreprises)): ?>
+                    <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                        <?php foreach ($this->entreprises as $entreprise): ?>
+                        <div class="list-group-item">
+                            <strong><?= $this->escape($entreprise['libelle']) ?></strong>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php else: ?>
+                    <div class="text-muted small">Aucune offre disponible.</div>
+                    <?php endif; ?>
                 </div>
 
+
                 <!-- Compétences -->
-                <div class="tab-pane show active p-3" id="tab-offres">
+                <div class="tab-pane p-3" id="tab-competences">
                     <?php if (!empty($this->metiers)): ?>
-                        <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->metiers as $fiche): ?>
-                                <div class="list-group-item">
-                                    <strong><?= $this->escape($fiche['libelle']) ?></strong>
-                                    <small class="text-muted small">
-                                        Actualisée le
-                                        <?= date('d/m/Y', strtotime($this->escape($fiche['date']))) ?>
-                                    </small><br>
-                                    <a href="<?= $this->escape($fiche['url']) ?>" target="_blank" class="small text-primary">
-                                        Voir la fiche
-                                    </a>
-                                </div>
-                            <?php endforeach; ?>
+                    <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                        <?php foreach ($this->metiers as $fiche): ?>
+                        <div class="list-group-item">
+                            <strong><?= $this->escape($fiche['libelle']) ?></strong>
+                            <small class="text-muted small">
+                                Actualisée le
+                                <?= date('d/m/Y', strtotime($this->escape($fiche['date']))) ?>
+                            </small><br>
+                            <a href="<?= $this->escape($fiche['url']) ?>" target="_blank" class="small text-primary">
+                                Voir la fiche
+                            </a>
                         </div>
+                        <?php endforeach; ?>
+                    </div>
                     <?php else: ?>
-                        <div class="text-muted small">Aucune offre disponible.</div>
+                    <div class="text-muted small">Aucune offre disponible.</div>
                     <?php endif; ?>
                 </div>
 
                 <!-- Services -->
-                <div class="tab-pane show active p-3" id="tab-offres">
+                <div class="tab-pane p-3" id="tab-services">
                     <?php if (!empty($this->services)): ?>
-                        <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->services as $structure): ?>
-                                <div class="list-group-item">
-                                    <strong><?= $this->escape($structure['libelle']) ?></strong>
-                                    <small class="text-muted small">
-                                        Actualisée le
-                                        <?= date('d/m/Y', strtotime($this->escape($structure['date']))) ?>
-                                    </small><br>
-                                    <a href="<?= $this->escape($structure['url']) ?>" target="_blank"
-                                        class="small text-primary">
-                                        Voir la structure
-                                    </a>
-                                </div>
-                            <?php endforeach; ?>
+                    <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                        <?php foreach ($this->services as $structure): ?>
+                        <div class="list-group-item">
+                            <strong><?= $this->escape($structure['libelle']) ?></strong>
+                            <small class="text-muted small">
+                                Actualisée le
+                                <?= date('d/m/Y', strtotime($this->escape($structure['date']))) ?>
+                            </small><br>
+                            <a href="<?= $this->escape($structure['url']) ?>" target="_blank"
+                                class="small text-primary">
+                                Voir la structure
+                            </a>
                         </div>
+                        <?php endforeach; ?>
+                    </div>
                     <?php else: ?>
-                        <div class="text-muted small">Aucune offre disponible.</div>
+                    <div class="text-muted small">Aucune offre disponible.</div>
                     <?php endif; ?>
                 </div>
 
                 <!-- Marché -->
-                <div class="tab-pane p-3" id="tab-marche">
+                <!-- <div class="tab-pane p-3" id="tab-marche">
                     <div class="card mb-2 p-2"><strong>Dynamique emploi :</strong> Croissante</div>
                     <div class="card mb-2 p-2"><strong>Tension :</strong> Modérée</div>
                     <div class="card mb-2 p-2"><strong>Demandeurs :</strong> 1 234</div>
                     <div class="card mb-2 p-2"><strong>Embauches :</strong> 567</div>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>
@@ -164,37 +178,55 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-    // Bouton Rafraîchir (demo)
-    document.getElementById('btn-refresh').addEventListener('click', function() {
-        alert("Données mises à jour (demo)");
-    });
+// Bouton Rafraîchir (demo)
+document.getElementById('btn-refresh').addEventListener('click', function() {
+    alert("Données mises à jour (demo)");
+});
 
 
-    document.addEventListener("DOMContentLoaded", function() {
-        const map = L.map('master-map').setView([48.8566, 2.3522], 6);
+document.addEventListener("DOMContentLoaded", function() {
+    const map = L.map('master-map').setView([48.8566, 2.3522], 6);
 
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18
-        }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 18
+    }).addTo(map);
 
-        // Marqueurs fictifs
-        const villes = [{
-                name: "Paris",
-                coords: [48.8566, 2.3522]
-            },
-            {
-                name: "Lyon",
-                coords: [45.7640, 4.8357]
-            },
-            {
-                name: "Marseille",
-                coords: [43.2965, 5.3698]
+    // Récupération des données depuis PHP
+    const offres = <?= json_encode($this->offres ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const entreprises =
+        <?= json_encode($this->entreprises ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const services = <?= json_encode($this->services ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    console.log('services', services);
+    console.log('entreprises', entreprises);
+    console.log('offres', offres);
+
+    // Groupe de markers pour faciliter l'affichage et le clustering
+    const markers = L.markerClusterGroup();
+
+    function addMarkers(data, type) {
+        data.forEach(item => {
+            const lat = item.latitude ?? item.lat ?? null;
+            const lon = item.longitude ?? item.lon ?? null;
+            if (lat && lon) {
+                const popupContent = `
+                    <strong>${item.libelle || ''}</strong><br>
+                    ${item.url ? `<a href="${item.url}" target="_blank">Voir</a>` : ''}<br>
+                    Type : ${type}
+                `;
+                const marker = L.marker([lat, lon]).bindPopup(popupContent);
+                markers.addLayer(marker);
             }
-        ];
-
-        villes.forEach(v => {
-            L.marker(v.coords).addTo(map).bindPopup(`<strong>${v.name}</strong><br>Offres disponibles`);
         });
-    });
+    }
+
+    addMarkers(offres, 'Offre');
+    addMarkers(entreprises, 'Entreprise');
+    addMarkers(services, 'Service');
+
+    map.addLayer(markers);
+    if (markers.getLayers().length) {
+        map.fitBounds(markers.getBounds());
+    }
+});
 </script>
