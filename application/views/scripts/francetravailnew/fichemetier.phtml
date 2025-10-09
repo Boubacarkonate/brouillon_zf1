@@ -2,6 +2,10 @@
 
 <?php if (!empty($this->ficheMetier)) : ?>
     <h2>Métier : <?= htmlspecialchars($this->ficheMetier['metier']['libelle'] ?? '-') ?></h2>
+    <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer" title="Enregistrer le métier"
+        data-libelle="<?= htmlspecialchars($this->ficheMetier['metier']['libelle'] ?? '') ?>" data-module="fiche">
+        enregistrer
+    </button>
 
     <h3>Compétences mobilisées :</h3>
     <ul>
@@ -42,3 +46,39 @@
 <?php else : ?>
     <p>Aucune donnée disponible.</p>
 <?php endif; ?>
+
+<script>
+    $(document).ready(function() {
+        $(document).on('click', '.btn-enregistrer', function() {
+            const btn = $(this);
+
+            // Récupération des données du bouton
+            const fiche = {
+                libelle: btn.data('libelle'),
+                url: window.location.href, // 👈 récupère l'URL complète de la page
+                module: btn.data('module')
+            };
+
+            console.log("📦 Données envoyées :", fiche);
+
+            $.ajax({
+                url: '/zf1/public/francetravailnew/enregistreroffre',
+                method: 'POST',
+                dataType: 'json',
+                data: fiche,
+                success: function(res) {
+                    if (res.success) {
+                        alert("✅ Fiche métier enregistrée !");
+                    } else {
+                        alert("❌ Erreur : " + (res.message ||
+                            "Impossible d'enregistrer la fiche."));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Erreur AJAX :", status, error, xhr.responseText);
+                    alert("⚠️ Erreur réseau (" + status + ")");
+                }
+            });
+        });
+    });
+</script>

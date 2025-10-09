@@ -66,8 +66,11 @@
     }
 </style>
 
-<div class="row">
-    <?= $this->partial('francetravailnew/partials/dashboard.phtml', $this->offres) ?>
+<div>
+    <?= $this->partial('francetravailnew/partials/dashboard.phtml', [
+        'recuperationData' => $this->dataRecupee
+    ]) ?>
+    <!-- <?php var_dump($this->dataRecupee) ?> -->
 </div>
 <!-- Filtres modernisés qui tiennent sur une ligne-->
 <div class="card shadow-sm mb-4 border-0">
@@ -166,7 +169,6 @@
                                 </p>
 
                                 <!-- Popover personnalisé avec onglets -->
-                                <!-- Popover personnalisé avec onglets -->
                                 <div id="customPopover-<?= $idx ?>" class="blocpopover">
                                     <div class="popover-header">
                                         <span>Détails de l'offre</span>
@@ -240,9 +242,11 @@
                             <div class="d-flex flex-column gap-2">
                                 <!-- Bouton Enregistrer -->
                                 <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer"
-                                    title="Enregistrer l'offre" data-id="<?= $offre['id'] ?? '' ?>"
-                                    data-intitule="<?= htmlspecialchars($offre['intitule'] ?? '') ?>"
-                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>">
+                                    title="Enregistrer l'offre" data-libelle="<?= htmlspecialchars($offre['intitule'] ?? '') ?>"
+                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>"
+                                    data-module="offres">
+                                    <!-- 👈 module ajouté -->
+                                    >
                                     <i class="fa-solid fa-floppy-disk"></i>
                                 </button>
 
@@ -470,9 +474,11 @@
             const btn = $(this);
 
             const offre = {
-                id: btn.data('id'),
-                intitule: btn.data('intitule'),
+                libelle: btn.data('libelle'),
                 url: btn.data('url'),
+                latitude: btn.data('lat'),
+                longitude: btn.data('lon'),
+                module: btn.data('module')
 
             };
             console.log(offre);

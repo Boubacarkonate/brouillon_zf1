@@ -181,6 +181,18 @@
                                     title="Voir sur la carte" data-service-idx="<?= $idx ?>">
                                     carte
                                 </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer"
+                                    data-service-idx="<?= $idx ?>"
+                                    data-libelle="<?= $this->escape($s['structure']['nom'] ?? '') ?>"
+                                    data-url="<?= $this->escape($s['structure']['site_web'] ?? '') ?>"
+                                    data-lat="<?= $this->escape($s['structure']['latitude'] ?? '') ?>"
+                                    data-lon="<?= $this->escape($s['structure']['longitude'] ?? '') ?>" data-module="services">
+                                    <!-- 👈 module ajouté -->
+
+                                    enregistrer
+                                </button>
+
+
                             </div>
                         </div>
 
@@ -345,6 +357,42 @@
         bg.addEventListener('click', () => {
             document.querySelectorAll('.blocpopover').forEach(p => p.style.display = 'none');
             bg.style.display = 'none';
+        });
+    });
+
+    $(document).ready(function() {
+        $(document).on('click', '.btn-enregistrer', function() {
+            const btn = $(this);
+
+            // Récupération des données du bouton
+            const service = {
+                libelle: btn.data('libelle'),
+                url: btn.data('url'),
+                latitude: btn.data('lat'),
+                longitude: btn.data('lon'),
+                module: btn.data('module')
+            };
+
+            console.log("Données à enregistrer :", service);
+
+            $.ajax({
+                url: '/zf1/public/francetravailnew/enregistreroffre',
+                method: 'POST',
+                dataType: 'json',
+                data: service,
+                success: function(res) {
+                    if (res.success) {
+                        alert("✅ Structure enregistrée !");
+                    } else {
+                        alert("❌ Erreur : " + (res.message ||
+                            "Impossible d'enregistrer la structure."));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Erreur AJAX :", status, error, xhr.responseText);
+                    alert("⚠️ Erreur réseau (" + status + ")");
+                }
+            });
         });
     });
 </script>

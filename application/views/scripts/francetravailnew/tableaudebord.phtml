@@ -1,0 +1,200 @@
+<!-- dashboard.phtml -->
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center my-3">
+        <h3>Ressources emploi & accompagnement</h3>
+        <div>
+            <select id="selectK" class="form-select d-inline-block" style="width:200px;">
+                <option value="demo">Demo</option>
+            </select>
+            <button id="btn-refresh" class="btn btn-outline-secondary">Rafraîchir</button>
+        </div>
+    </div>
+
+    <!-- KPI bar -->
+    <div class="row g-3 mb-3">
+        <div class="col">
+            <div class="card p-3">Offres enregistrées <strong id="kpi-offres"><?= $this->totalOffre ?></strong></div>
+        </div>
+        <div class="col">
+            <div class="card p-3">Métiers détectés <strong id="kpi-metiers"></strong><?= $this->totalMetiers ?></div>
+        </div>
+        <div class="col">
+            <div class="card p-3">Services proches <strong id="kpi-services"><?= $this->totalServices ?></strong></div>
+        </div>
+        <div class="col">
+            <div class="card p-3">Dernière MAJ <strong id="kpi-maj">08/10/2025</strong></div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- gauche : filtres -->
+        <div class="col-md-3">
+            <div class="card p-3 mb-3">
+                <h5>Filtres</h5>
+                <label class="form-label">Ville</label>
+                <input type="text" class="form-control" value="Paris">
+                <label class="form-label mt-2">Code ROME</label>
+                <input type="text" class="form-control" value="M1607">
+            </div>
+            <div class="card p-2 mb-2">
+                <h5>Liens</h5>
+                <a href="#">Offre d'emploi</a>
+                <a href="#">Métiers & Compétences</a>
+                <a href="#">Entreprises & Recrutement</a>
+                <a href="#">Services d'accompagnement</a>
+            </div>
+        </div>
+
+        <!-- Centre : carte Leaflet -->
+        <div class="col-md-6">
+            <div class="card p-2">
+                <h5 class="text-center mb-2">Carte des offres</h5>
+                <div id="master-map" style="height:60vh; border-radius:8px;"></div>
+            </div>
+        </div>
+
+        <!-- droite : onglets -->
+        <div class="col-md-3">
+            <ul class="nav nav-tabs" id="masterTabs" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab"
+                        data-bs-target="#tab-offres">Offres</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-entreprises">Entreprises</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-competences">Compétences</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-services">Services</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-marche">Marché</button></li>
+            </ul>
+
+            <div class="tab-content mt-2">
+                <!-- Offres -->
+                <div class="tab-pane show active p-3" id="tab-offres">
+                    <?php if (!empty($this->offres)): ?>
+                        <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                            <?php foreach ($this->offres as $offre): ?>
+                                <div class="list-group-item">
+                                    <strong><?= $this->escape($offre['libelle']) ?></strong>
+                                    <small class="text-muted small">
+                                        Actualisée le
+                                        <?= date('d/m/Y', strtotime($this->escape($offre['date']))) ?>
+                                    </small><br>
+                                    <a href="<?= $this->escape($offre['url']) ?>" target="_blank" class="small text-primary">
+                                        Voir l'offre
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-muted small">Aucune offre disponible.</div>
+                    <?php endif; ?>
+                </div>
+
+
+                <!-- Entreprises -->
+                <div class="tab-pane p-3" id="tab-entreprises">
+                    <ul class="list-group">
+                        <li class="list-group-item">Entreprise A - Paris - 50 salariés</li>
+                        <li class="list-group-item">Entreprise B - Lyon - 20 salariés</li>
+                        <li class="list-group-item">Entreprise C - Marseille - 100 salariés</li>
+                    </ul>
+                </div>
+
+                <!-- Compétences -->
+                <div class="tab-pane show active p-3" id="tab-offres">
+                    <?php if (!empty($this->metiers)): ?>
+                        <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                            <?php foreach ($this->metiers as $fiche): ?>
+                                <div class="list-group-item">
+                                    <strong><?= $this->escape($fiche['libelle']) ?></strong>
+                                    <small class="text-muted small">
+                                        Actualisée le
+                                        <?= date('d/m/Y', strtotime($this->escape($fiche['date']))) ?>
+                                    </small><br>
+                                    <a href="<?= $this->escape($fiche['url']) ?>" target="_blank" class="small text-primary">
+                                        Voir la fiche
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-muted small">Aucune offre disponible.</div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Services -->
+                <div class="tab-pane show active p-3" id="tab-offres">
+                    <?php if (!empty($this->services)): ?>
+                        <div class="list-group" style="max-height: 50vh; overflow-y: auto;">
+                            <?php foreach ($this->services as $structure): ?>
+                                <div class="list-group-item">
+                                    <strong><?= $this->escape($structure['libelle']) ?></strong>
+                                    <small class="text-muted small">
+                                        Actualisée le
+                                        <?= date('d/m/Y', strtotime($this->escape($structure['date']))) ?>
+                                    </small><br>
+                                    <a href="<?= $this->escape($structure['url']) ?>" target="_blank"
+                                        class="small text-primary">
+                                        Voir la structure
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <div class="text-muted small">Aucune offre disponible.</div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Marché -->
+                <div class="tab-pane p-3" id="tab-marche">
+                    <div class="card mb-2 p-2"><strong>Dynamique emploi :</strong> Croissante</div>
+                    <div class="card mb-2 p-2"><strong>Tension :</strong> Modérée</div>
+                    <div class="card mb-2 p-2"><strong>Demandeurs :</strong> 1 234</div>
+                    <div class="card mb-2 p-2"><strong>Embauches :</strong> 567</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+    // Bouton Rafraîchir (demo)
+    document.getElementById('btn-refresh').addEventListener('click', function() {
+        alert("Données mises à jour (demo)");
+    });
+
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const map = L.map('master-map').setView([48.8566, 2.3522], 6);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        // Marqueurs fictifs
+        const villes = [{
+                name: "Paris",
+                coords: [48.8566, 2.3522]
+            },
+            {
+                name: "Lyon",
+                coords: [45.7640, 4.8357]
+            },
+            {
+                name: "Marseille",
+                coords: [43.2965, 5.3698]
+            }
+        ];
+
+        villes.forEach(v => {
+            L.marker(v.coords).addTo(map).bindPopup(`<strong>${v.name}</strong><br>Offres disponibles`);
+        });
+    });
+</script>

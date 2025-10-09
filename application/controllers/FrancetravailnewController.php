@@ -130,7 +130,7 @@ class FranceTravailnewController extends Zend_Controller_Action
         $data = $this->getRequest()->getPost();
 
         // Vérification des champs obligatoires
-        if (empty($data['id']) || empty($data['intitule']) || empty($data['url'])) {
+        if (empty($data['libelle'])) {
             return $this->_helper->json([
                 'success' => false,
                 'message' => 'Données manquantes'
@@ -144,9 +144,11 @@ class FranceTravailnewController extends Zend_Controller_Action
             $tableFrancetravail = new Zend_Db_Table('offrefrancetravail');
 
             $insertData = [
-                'identifiant_offre' => $data['id'],
-                'poste'             => $data['intitule'],
-                'url'               => $data['url'],
+                'module'    => $data['module'] ?? 'inconnu', // 👈 ici
+                'libelle'             => $data['libelle'],
+                'url'               => $data['url'] ?? null,
+                'latitude'  => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
                 'date'              => new Zend_Db_Expr('NOW()')
             ];
 
@@ -1144,6 +1146,27 @@ class FranceTravailnewController extends Zend_Controller_Action
         $offres = $model->getAll();
 
 
+        $this->view->offres = $offres;
+    }
+
+    public function tableaudebordAction()
+    {
+        $model = new Application_Model_Offrefrancetravail();
+        $offres = $model->getAll();  //recuperation des offres
+        $metiers = $model->getAllMetiers();  //recuperation des metiers
+        $services = $model->getAllServices();  //recuperation des services
+
+        $totalOffre = $model->totalOffres(); //recuperation du total des offres
+        $totalServices = $model->totalServices(); //recuperation du total des services
+        $totalMetiers = $model->totalMetiers(); //recuperation du total des services
+
+
+        $this->view->totalOffre = $totalOffre;
+        $this->view->totalServices = $totalServices;
+        $this->view->totalMetiers = $totalMetiers;
+
+        $this->view->metiers = $metiers;
+        $this->view->services = $services;
         $this->view->offres = $offres;
     }
 }
