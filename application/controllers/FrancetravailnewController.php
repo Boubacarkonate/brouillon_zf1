@@ -141,7 +141,7 @@ class FranceTravailnewController extends Zend_Controller_Action
         // 3. Insertion en base
         // ============================
         try {
-            $tableFrancetravail = new Zend_Db_Table('francetravail');
+            $tableFrancetravail = new Zend_Db_Table('offrefrancetravail');
 
             $insertData = [
                 'identifiant_offre' => $data['id'],
@@ -169,6 +169,8 @@ class FranceTravailnewController extends Zend_Controller_Action
             ]);
         }
     }
+
+
 
 
 
@@ -1136,5 +1138,12 @@ class FranceTravailnewController extends Zend_Controller_Action
         }
     }
 
-    public function dashboardAction() {}
+    public function dashboardAction()
+    {
+        $model = new Application_Model_Offrefrancetravail();
+        $offres = $model->getAll();
+
+
+        $this->view->offres = $offres;
+    }
 }

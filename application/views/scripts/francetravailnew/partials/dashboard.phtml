@@ -1,0 +1,130 @@
+<!-- Bouton pour ouvrir / fermer le dashboard offcanvas -->
+<button class="btn btn-primary mb-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasDashboard"
+    aria-controls="offcanvasDashboard">
+    Dashboard Emploi
+</button>
+
+<!-- Offcanvas compact -->
+<div class="offcanvas offcanvas-start" data-bs-scroll="true" tabindex="-1" id="offcanvasDashboard"
+    aria-labelledby="offcanvasDashboardLabel" style="width:350px;">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasDashboardLabel">Ressources emploi & accompagnement</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-2" style="overflow-y:auto; max-height:90vh;">
+        <!-- Dashboard maquette -->
+        <div class="container-fluid">
+            <!-- Header KPI -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6>Contexte Demo</h6>
+                <button id="btn-refresh" class="btn btn-sm btn-outline-secondary">Rafraîchir</button>
+            </div>
+
+            <!-- KPI bar -->
+            <div class="row g-2 mb-3 text-center">
+                <div class="col">
+                    <div class="card p-2 small">Offres <strong>42</strong></div>
+                </div>
+                <div class="col">
+                    <div class="card p-2 small">Métiers <strong>8</strong></div>
+                </div>
+                <div class="col">
+                    <div class="card p-2 small">Services <strong>15</strong></div>
+                </div>
+                <div class="col">
+                    <div class="card p-2 small">MAJ <strong>08/10/2025</strong></div>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="card p-2 mb-2">
+                <h6>Filtres</h6>
+                <label class="form-label small">Ville</label>
+                <input type="text" class="form-control form-control-sm" value="Paris">
+                <label class="form-label small mt-2">Code ROME</label>
+                <input type="text" class="form-control form-control-sm" value="M1607">
+            </div>
+
+            <!-- Onglets -->
+            <ul class="nav nav-tabs nav-justified small" id="masterTabs" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab"
+                        data-bs-target="#tab-offres">Offres</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-entreprises">Entreprises</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-competences">Compétences</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-services">Services</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                        data-bs-target="#tab-marche">Marché</button></li>
+            </ul>
+
+            <div class="tab-content mt-2 small">
+                <!-- Offres -->
+                <div class="tab-pane show active p-2" id="tab-offres">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item py-1">
+                            <div class="col-md-4">
+                                <div class="card mb-3 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><?= $this->escape($this->poste) ?></h5>
+                                        <p class="card-text">
+                                            <a href="<?= $this->escape($this->url) ?>" target="_blank"
+                                                class="btn btn-sm btn-primary">
+                                                Voir l'offre
+                                            </a>
+                                        </p>
+                                        <small class="text-muted">Publiée le <?= $this->escape($this->date) ?></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="list-group-item py-1">Conseiller Emploi - Entreprise B - Lyon</li>
+                        <li class="list-group-item py-1">Data Analyst - Entreprise C - Marseille</li>
+                    </ul>
+                </div>
+
+                <!-- Entreprises -->
+                <div class="tab-pane p-2" id="tab-entreprises">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item py-1">Entreprise A - Paris - 50 salariés</li>
+                        <li class="list-group-item py-1">Entreprise B - Lyon - 20 salariés</li>
+                        <li class="list-group-item py-1">Entreprise C - Marseille - 100 salariés</li>
+                    </ul>
+                </div>
+
+                <!-- Compétences -->
+                <div class="tab-pane p-2" id="tab-competences">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item py-1">PHP / Symfony</li>
+                        <li class="list-group-item py-1">JavaScript / Vue.js</li>
+                        <li class="list-group-item py-1">SQL / Data Analysis</li>
+                    </ul>
+                </div>
+
+                <!-- Services -->
+                <div class="tab-pane p-2" id="tab-services">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item py-1">Pôle emploi - Paris</li>
+                        <li class="list-group-item py-1">Mission locale - Lyon</li>
+                        <li class="list-group-item py-1">Cap emploi - Marseille</li>
+                    </ul>
+                </div>
+
+                <!-- Marché -->
+                <div class="tab-pane p-2" id="tab-marche">
+                    <div class="card mb-1 p-1"><strong>Dynamique emploi :</strong> Croissante</div>
+                    <div class="card mb-1 p-1"><strong>Tension :</strong> Modérée</div>
+                    <div class="card mb-1 p-1"><strong>Demandeurs :</strong> 1 234</div>
+                    <div class="card mb-1 p-1"><strong>Embauches :</strong> 567</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('btn-refresh').addEventListener('click', function() {
+            alert("Données mises à jour (demo)");
+        });
+    </script>
+</div>

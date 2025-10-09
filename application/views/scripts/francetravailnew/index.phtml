@@ -66,7 +66,9 @@
     }
 </style>
 
-
+<div class="row">
+    <?= $this->partial('francetravailnew/partials/dashboard.phtml', $this->offres) ?>
+</div>
 <!-- Filtres modernisés qui tiennent sur une ligne-->
 <div class="card shadow-sm mb-4 border-0">
 
@@ -240,8 +242,7 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer"
                                     title="Enregistrer l'offre" data-id="<?= $offre['id'] ?? '' ?>"
                                     data-intitule="<?= htmlspecialchars($offre['intitule'] ?? '') ?>"
-                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>"
-                                    data-dateactualisation="<?= htmlspecialchars($offre['dateActualisation'] ?? '') ?>">
+                                    data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>">
                                     <i class="fa-solid fa-floppy-disk"></i>
                                 </button>
 
@@ -472,14 +473,13 @@
                 id: btn.data('id'),
                 intitule: btn.data('intitule'),
                 url: btn.data('url'),
-                dateActualisation: btn.data('dateactualisation'),
-                K: K // important !
+
             };
             console.log(offre);
 
 
             $.ajax({
-                url: '/francetravail/enregistreroffre',
+                url: '/zf1/public/francetravailnew/enregistreroffre',
                 method: 'POST',
                 dataType: 'json',
                 data: offre,
