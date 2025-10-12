@@ -41,7 +41,7 @@
         <?php if (!empty($this->dynamique)): ?>
             <div class="col">
                 <div class="card h-100 shadow-sm text-center">
-                    <div class="card-header bg-primary text-white fw-bold">
+                    <div class="card-header bg-secondary text-white fw-bold">
                         📈 Dynamique de l’emploi
                     </div>
                     <div class="card-body">
@@ -57,65 +57,97 @@
                             </span>
                             <?= $this->escape($this->dynamique['interpretation'] ?? '-') ?>
                         </div>
+                        <p class="text-muted small mt-3">
+                            Source : France Travail, <?= $this->escape($this->dynamique['periodeLib']) ?>
+                        </p>
+
                     </div>
                     <div class="card-footer text-muted small">
-                        Maj : <?= $this->escape($this->dynamique['datMaj']) ?>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
-
-        <!-- Tension -->
-        <?php if (!empty($this->tension)): ?>
-            <div class="col">
-                <div class="card h-100 shadow-sm text-center">
-                    <div class="card-header bg-danger text-white fw-bold">
-                        ⚠️ Tension de recrutement
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Métier :</strong> <?= $this->escape($this->tension['libActivite']) ?></p>
-                        <p><strong>Indice tension :</strong>
-                            <span class="badge <?php
-                                                if ($this->tension['valeur'] >= 1) echo 'bg-danger';
-                                                elseif ($this->tension['valeur'] > 0) echo 'bg-warning';
-                                                else echo 'bg-success'; ?>">
-                                <?= $this->escape($this->tension['interpretation']) ?>
-                            </span>
-                        </p>
+                        dernières mise à jour des données :
+                        <?php
+                        if (!empty($this->dynamique['datMaj'])) {
+                            $date = new DateTime($this->dynamique['datMaj']);
+                            echo $this->escape($date->format('d/m/Y')); // JJ/MM/AAAA
+                        } else {
+                            echo '-';
+                        }
+                        ?>
                     </div>
                 </div>
             </div>
         <?php endif; ?>
 
         <!-- Indicateurs prioritaires -->
-        <?php if (!empty($this->intensiteEmbauche) || !empty($this->manqueMainOeuvre)): ?>
-            <div class="col">
-                <div class="card h-100 shadow-sm text-center">
-                    <div class="card-header bg-dark text-white fw-bold">
+        <?php if (!empty($this->intensiteEmbauche) || !empty($this->manqueMainOeuvre || !empty($this->tensionPrincipale))): ?>
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100 shadow-sm text-center border-0">
+                    <div class="card-header bg-secondary text-white fw-bold">
                         ⭐ Indicateurs prioritaires
                     </div>
                     <div class="card-body">
                         <?php if (!empty($this->intensiteEmbauche)): ?>
                             <p><strong>Intensité d’embauche :</strong>
-                                <span class="badge bg-info"><?= $this->escape($this->intensiteEmbauche['interpretation']) ?></span>
+                                <span class="badge bg-<?= $this->intensiteEmbauche['badge'] ?>">
+                                    <?= $this->escape($this->intensiteEmbauche['texte']) ?>
+                                </span>
                             </p>
                         <?php endif; ?>
+
                         <?php if (!empty($this->manqueMainOeuvre)): ?>
                             <p><strong>Manque de main d’œuvre :</strong>
-                                <span
-                                    class="badge bg-warning"><?= $this->escape($this->manqueMainOeuvre['interpretation']) ?></span>
+                                <span class="badge bg-<?= $this->manqueMainOeuvre['badge'] ?>">
+                                    <?= $this->escape($this->manqueMainOeuvre['texte']) ?>
+                                </span>
                             </p>
+                            <p class="text-muted small mt-3">
+                                Source : France Travail, <?= $this->escape($this->intensiteEmbauche['periodeLib']) ?>
+                            </p>
+
                         <?php endif; ?>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        dernières mise à jour des données :
+                        <?php
+
+                        $date = new DateTime($this->tensionPrincipale['datMaj']);
+                        echo $this->escape($date->format('d/m/Y')); // JJ/MM/AAAA
+
+                        ?>
                     </div>
                 </div>
             </div>
         <?php endif; ?>
 
+        <!-- Indicateurs secondaires -->
+        <!-- <?php if (!empty($this->attractiviteSalariale) || !empty($this->conditionsTravail) || !empty($this->durabiliteEmploi) || !empty($this->inadEquationGeo)): ?>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm text-center border-0">
+            <div class="card-header bg-dark text-white fw-bold">
+                ⚡ Indicateurs secondaires
+            </div>
+            <div class="card-body">
+                <?php foreach (['attractiviteSalariale', 'conditionsTravail', 'durabiliteEmploi', 'inadEquationGeo'] as $ind):
+                        if (!empty($this->$ind)):
+                ?>
+                <p><strong><?= ucwords(str_replace('_', ' ', $ind)) ?> :</strong>
+                    <span class="badge bg-<?= $this->$ind['badge'] ?>">
+                        <?= $this->escape($this->$ind['texte']) ?>
+                    </span>
+                </p>
+                <?php
+                        endif;
+                    endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?> -->
+
+
         <!-- Demandeurs -->
         <?php if (!empty($this->demandeur12DerniersMois)): ?>
             <div class="col">
                 <div class="card h-100 shadow-sm text-center">
-                    <div class="card-header bg-info text-white fw-bold">👥 Demandeurs d’emploi</div>
+                    <div class="card-header bg-secondary text-white fw-bold">👥 Demandeurs d’emploi</div>
                     <div class="card-body">
                         <h2 class="fw-bold display-6 text-primary">
                             <?= number_format($this->demandeur12DerniersMois['nombre'], 0, ',', ' ') ?>
@@ -126,6 +158,15 @@
                             Source : France Travail, <?= $this->escape($this->demandeur12DerniersMois['periodeLib']) ?>
                         </p>
                     </div>
+                    <div class="card-footer text-muted small">
+                        dernières mise à jour des données :
+                        <?php
+
+                        $date = new DateTime($this->demandeur12DerniersMois['datMaj']);
+                        echo $this->escape($date->format('d/m/Y')); // JJ/MM/AAAA
+
+                        ?>
+                    </div>
                 </div>
             </div>
         <?php endif; ?>
@@ -134,7 +175,7 @@
         <?php if (!empty($this->embauches)): ?>
             <div class="col">
                 <div class="card h-100 shadow-sm text-center">
-                    <div class="card-header bg-success text-white fw-bold">💼 Embauches récentes</div>
+                    <div class="card-header bg-secondary text-white fw-bold">💼 Embauches récentes</div>
                     <div class="card-body">
                         <h4 class="fw-bold text-success mb-3">
                             <?= number_format($this->embauches['nombre'], 0, ',', ' ') ?>
@@ -144,6 +185,14 @@
                         <p class="small text-muted mt-2">
                             Source : France Travail, <?= $this->escape($this->embauches['periodeLib']) ?>
                         </p>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        dernières mise à jour des données :
+                        <?php
+
+                        $date = new DateTime($this->embauches['datMaj']);
+                        echo $this->escape($date->format('d/m/Y')); // JJ/MM/AAAA
+                        ?>
                     </div>
                 </div>
             </div>
@@ -167,6 +216,14 @@
                             Source : Acoss &amp; MSA, <?= $this->escape($this->embauches['periodeLib']) ?>
                         </p>
                     </div>
+                    <div class="card-footer text-muted small">
+                        dernières mise à jour des données :
+                        <?php
+
+                        $date = new DateTime($this->embauches['datMaj']);
+                        echo $this->escape($date->format('d/m/Y')); // JJ/MM/AAAA
+                        ?>
+                    </div>
                 </div>
             </div>
         <?php endif; ?>
@@ -175,7 +232,7 @@
         <?php if (!empty($this->statsOffres)): ?>
             <div class="col">
                 <div class="card h-100 shadow-sm text-center">
-                    <div class="card-header bg-primary text-white fw-bold">📊 Offres d’emploi</div>
+                    <div class="card-header bg-secondary text-white fw-bold">📊 Offres d’emploi</div>
                     <div class="card-body">
                         <h2 class="fw-bold display-6 text-primary">
                             <?= number_format($this->statsOffres['nombre'], 0, ',', ' ') ?>
@@ -186,6 +243,14 @@
                         <p class="text-muted small mt-3">
                             Source : France Travail, <?= $this->escape($this->statsOffres['periodeLib']) ?>
                         </p>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        dernières mise à jour des données :
+                        <?php
+
+                        $date = new DateTime($this->statsOffres['datMaj']);
+                        echo $this->escape($date->format('d/m/Y')); // JJ/MM/AAAA
+                        ?>
                     </div>
                 </div>
             </div>

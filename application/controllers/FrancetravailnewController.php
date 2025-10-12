@@ -635,15 +635,17 @@ class FranceTravailnewController extends Zend_Controller_Action
                     ?? null;
                 // var_dump($valeur);
 
+                $dynamiqueInterpr = $this->interpretDynamique((int)$valeur);
+
                 $dynamique = [
                     'valeur'        => $valeur,
                     'periodeLib'    => $v['libPeriode'] ?? '-',
                     'datMaj'        => $v['datMaj'] ?? null,
                     'territoire'    => $v['libTerritoire'] ?? '-',
-                    'departement' => $v['codeTerritoire'],
+                    'departement'   => $v['codeTerritoire'] ?? '-',
                     'activite'      => $v['libActivite'] ?? 'Marché global',
-                    'valeur' => $v['valeurPrincipaleNom'],
-                    'interpretation' => $this->interpretDynamique($valeur)
+                    'interpretation' => $dynamiqueInterpr['texte'],
+                    'badge'         => $dynamiqueInterpr['badge']
                 ];
             }
 
@@ -846,112 +848,90 @@ class FranceTravailnewController extends Zend_Controller_Action
             // exit;
 
 
+
             // --- Tension recrutement ---
             $paramsTension = [
                 "codeTypeTerritoire"   => "DEP",
                 "codeTerritoire"       => $territoireCode,
                 "codeTypeActivite"     => "ROME",
                 "codeActivite"         => $codeRome,
-                "codeTypePeriode"      => "ANNEE",             // toujours annuel
-                "codeTypeNomenclature" => "TYPE_TENSION",      // toujours ce libellé
+                "codeTypePeriode"      => "ANNEE",
+                "codeTypeNomenclature" => "TYPE_TENSION",
                 "dernierePeriode"      => true,
-                "sansCaracteristiques" => true        // pas de caractéristiques
+                // "sansCaracteristiques" => true
             ];
 
             try {
                 $ten = $model->getTensionRecrutement($paramsTension);
                 // var_dump($ten);
                 // exit;
-
                 // --- Initialisation des indicateurs ---
-                $tensionPrincipale       = null;  // Indicateur de tension global
-                $intensiteEmbauche       = null;  // Intensité d’embauche
-                $manqueMainOeuvre        = null;  // Manque de main-d’œuvre
-                $attractiviteSalariale   = null;  // Attractivité salariale
-                $conditionsTravail       = null;  // Conditions de travail
-                $durabiliteEmploi        = null;  // Durabilité de l’emploi
-                $inadEquationGeo         = null;  // Inadéquation géographique
+                $tensionPrincipale      = null;
+                $intensiteEmbauche      = null;
+                $manqueMainOeuvre       = null;
+                $attractiviteSalariale  = null;
+                $conditionsTravail      = null;
+                $durabiliteEmploi       = null;
+                $inadEquationGeo        = null;
 
                 foreach ($ten['listeValeursParPeriode'] as $v) {
                     $valeur = $v['valeurPrincipaleDecimale'] ?? null;
+                    $interpret = $this->interpretIndicateur($v['codeNomenclature'], $valeur);
 
                     switch ($v['codeNomenclature']) {
                         case 'PERSPECTIVE':
-                            $tensionPrincipale = [
-                                'valeur'         => $valeur,
-                                'periodeType'    => $v['codeTypePeriode'],
-                                'periodeCode'    => $v['codePeriode'],
-                                'periodeLib'     => $v['libPeriode'],
-                                'datMaj'         => $v['datMaj'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $tensionPrincipale = $interpret + [
+                                'periodeType' => $v['codeTypePeriode'],
+                                'periodeCode' => $v['codePeriode'],
+                                'periodeLib'  => $v['libPeriode'],
+                                'datMaj'      => $v['datMaj'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
 
                         case 'INT_EMB':
-                            $intensiteEmbauche = [
-                                'valeur'         => $valeur,
-                                'periodeLib'     => $v['libPeriode'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $intensiteEmbauche = $interpret + [
+                                'periodeLib'  => $v['libPeriode'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
 
                         case 'MAIN_OEUVRE':
-                            $manqueMainOeuvre = [
-                                'valeur'         => $valeur,
-                                'periodeLib'     => $v['libPeriode'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $manqueMainOeuvre = $interpret + [
+                                'periodeLib'  => $v['libPeriode'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
 
                         case 'ATTR_SALARIALE':
-                            $attractiviteSalariale = [
-                                'valeur'         => $valeur,
-                                'periodeLib'     => $v['libPeriode'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $attractiviteSalariale = $interpret + [
+                                'periodeLib'  => $v['libPeriode'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
 
                         case 'COND_TRAVAIL':
-                            $conditionsTravail = [
-                                'valeur'         => $valeur,
-                                'periodeLib'     => $v['libPeriode'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $conditionsTravail = $interpret + [
+                                'periodeLib'  => $v['libPeriode'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
 
                         case 'DUR_EMPL':
-                            $durabiliteEmploi = [
-                                'valeur'         => $valeur,
-                                'periodeLib'     => $v['libPeriode'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $durabiliteEmploi = $interpret + [
+                                'periodeLib'  => $v['libPeriode'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
 
                         case 'MISMATCH_GEO':
-                            $inadEquationGeo = [
-                                'valeur'         => $valeur,
-                                'periodeLib'     => $v['libPeriode'],
-                                'libActivite'    => $v['libActivite'],
-                                'interpretation' => $this->interpretIndicateur($v['codeNomenclature'], $valeur),
+                            $inadEquationGeo = $interpret + [
+                                'periodeLib'  => $v['libPeriode'],
+                                'libActivite' => $v['libActivite'],
                             ];
                             break;
                     }
                 }
-
-                // var_dump($tensionPrincipale);
-                // var_dump($intensiteEmbauche);
-                // var_dump($manqueMainOeuvre);
-                // var_dump($attractiviteSalariale);
-                // var_dump($conditionsTravail);
-                // var_dump($durabiliteEmploi);
-                // var_dump($inadEquationGeo);
-                // exit;
 
                 // Passe les valeurs à la vue
                 $this->view->tensionPrincipale      = $tensionPrincipale;
@@ -1099,94 +1079,81 @@ class FranceTravailnewController extends Zend_Controller_Action
         ];
     }
 
-    private function interpretDynamique($valeur)
+    private function interpretDynamique(?int $valeur): array
     {
-        if ($valeur === null) return "Non disponible";
+        if ($valeur === null) {
+            return ['texte' => "Non disponible", 'badge' => "secondary"];
+        }
 
-        if ($valeur < 0) {
-            return "Recul de l'emploi (marché en baisse)";
-        } elseif ($valeur >= 0 && $valeur <= 2) {
-            return "Stabilité du marché";
-        } else {
-            return "Marché en croissance (dynamique positive)";
+        switch ($valeur) {
+            case 3:
+                return ['texte' => "Très dynamique : forte croissance attendue", 'badge' => "success"];
+            case 2:
+                return ['texte' => "Dynamique moyenne : emploi stable, croissance modérée", 'badge' => "warning"];
+            case 1:
+                return ['texte' => "Faible dynamique : opportunités limitées", 'badge' => "danger"];
+            default:
+                return ['texte' => "Indicateur non défini", 'badge' => "secondary"];
         }
     }
 
 
-    // protected function interpretTension($valeur) {
-    //     if ($valeur === null) return "Donnée non disponible";
 
-    //     if ($valeur >= 1) {
-    //         return "Tension forte";
-    //     } elseif ($valeur > 0) {
-    //         return "Tension modérée";
-    //     } elseif ($valeur == 0) {
-    //         return "Tension neutre";
-    //     } elseif ($valeur > -1) {
-    //         return "Tension faible";
-    //     } else {
-    //         return "Tension très faible";
-    //     }   
-    //      }
 
-    protected function interpretIndicateur(string $codeNomenclature, ?float $valeur): string
+
+    protected function interpretIndicateur(string $codeNomenclature, ?float $valeur): array
     {
         if ($valeur === null) {
-            return "Donnée non disponible";
+            return ['texte' => "Donnée non disponible", 'badge' => "secondary"];
         }
 
         switch ($codeNomenclature) {
 
-            // ======================
             // Indicateur de tension global
-            // ======================
             case 'PERSPECTIVE':
-                if ($valeur >= 1) return "Tension forte";
-                if ($valeur > 0) return "Tension modérée";
-                if ($valeur == 0) return "Tension neutre";
-                if ($valeur > -1) return "Tension faible";
-                return "Tension très faible";
+                if ($valeur >= 1) return ['texte' => "Tension forte", 'badge' => "danger"];
+                if ($valeur > 0) return ['texte' => "Tension modérée", 'badge' => "warning"];
+                if ($valeur == 0) return ['texte' => "Tension neutre", 'badge' => "info"];
+                if ($valeur > -1) return ['texte' => "Tension faible", 'badge' => "success"];
+                return ['texte' => "Tension très faible", 'badge' => "secondary"];
 
-                // ======================
                 // Indicateurs prioritaires
-                // ======================
             case 'INT_EMB':
-                if ($valeur >= 1) return "Embauche rapide";
-                if ($valeur > 0) return "Embauche modérée";
-                return "Embauche faible";
+                if ($valeur >= 1) return ['texte' => "Embauche rapide", 'badge' => "success"];
+                if ($valeur > 0) return ['texte' => "Embauche modérée", 'badge' => "warning"];
+                return ['texte' => "Embauche faible", 'badge' => "danger"];
 
             case 'MAIN_OEUVRE':
-                if ($valeur >= 1) return "Forte pénurie";
-                if ($valeur > 0) return "Pénurie modérée";
-                return "Pas de pénurie";
+                if ($valeur >= 1) return ['texte' => "Forte pénurie", 'badge' => "danger"];
+                if ($valeur > 0) return ['texte' => "Pénurie modérée", 'badge' => "warning"];
+                return ['texte' => "Pas de pénurie", 'badge' => "success"];
 
-                // ======================
                 // Indicateurs secondaires
-                // ======================
             case 'ATTR_SALARIALE':
-                if ($valeur >= 0.5) return "Salarialement attractif";
-                if ($valeur > 0) return "Légèrement attractif";
-                return "Peu attractif";
+                if ($valeur >= 0.5) return ['texte' => "Salarialement attractif", 'badge' => "success"];
+                if ($valeur > 0) return ['texte' => "Légèrement attractif", 'badge' => "warning"];
+                return ['texte' => "Peu attractif", 'badge' => "danger"];
 
             case 'COND_TRAVAIL':
-                if ($valeur >= 0.5) return "Bonnes conditions";
-                if ($valeur > 0) return "Conditions correctes";
-                return "Conditions difficiles";
+                if ($valeur >= 0.5) return ['texte' => "Bonnes conditions", 'badge' => "success"];
+                if ($valeur > 0) return ['texte' => "Conditions correctes", 'badge' => "warning"];
+                return ['texte' => "Conditions difficiles", 'badge' => "danger"];
 
             case 'DUR_EMPL':
-                if ($valeur >= 0.5) return "Emplois stables";
-                if ($valeur > 0) return "Emplois moyennement stables";
-                return "Emplois précaires";
+                if ($valeur >= 0.5) return ['texte' => "Emplois stables", 'badge' => "success"];
+                if ($valeur > 0) return ['texte' => "Emplois moyennement stables", 'badge' => "warning"];
+                return ['texte' => "Emplois précaires", 'badge' => "danger"];
 
             case 'MISMATCH_GEO':
-                if ($valeur >= 0.5) return "Fort décalage géographique";
-                if ($valeur > 0) return "Décalage modéré";
-                return "Décalage faible";
+                if ($valeur >= 0.5) return ['texte' => "Fort décalage géographique", 'badge' => "danger"];
+                if ($valeur > 0) return ['texte' => "Décalage modéré", 'badge' => "warning"];
+                return ['texte' => "Décalage faible", 'badge' => "success"];
 
             default:
-                return "Valeur : " . $valeur;
+                return ['texte' => "Valeur : " . $valeur, 'badge' => "secondary"];
         }
     }
+
 
     public function iastatsAction()
     {
