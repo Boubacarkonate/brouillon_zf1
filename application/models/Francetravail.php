@@ -32,6 +32,13 @@ class Application_Model_Francetravail
     protected $tokenMarcheTravailExpiresAt;
 
 
+    protected $apiBaseUrlIa   = 'https://api.francetravail.io/partenaire/stats-informations-territoire';
+    protected $scopeIa       = 'infosterritoire api_stats-informations-territoirev1';
+    protected $accessTokenIa;
+    protected $tokenUrlIa = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire';
+    protected $tokenIaExpiresAt;
+
+
 
 
     // === Instarlink (Match via Soft Skills) ===
@@ -689,9 +696,9 @@ class Application_Model_Francetravail
         return $this->callApi('/v1/indicateur/stat-perspective-employeur', $params);
     }
 
-    public function getStatsSalaire($codeTypeTerritoire, $codeTerritoire)
+    public function getStatsSalaire($codeTypeTerritoire, $codeTerritoire, $codeRome)
     {
-        $endpoint = "/v1/indicateur/salaire-rome-fap/{$codeTypeTerritoire}/{$codeTerritoire}";
+        $endpoint = "/v1/indicateur/salaire-rome-fap/{$codeTypeTerritoire}/{$codeTerritoire}?codeRome={$codeRome}";
         $token = $this->getAccessTokenMarcheTravail();
 
         $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
@@ -701,8 +708,6 @@ class Application_Model_Francetravail
             'Accept'        => 'application/json',
         ]);
 
-
-
         $response = $client->request();
         if (!$response->isSuccessful()) {
             throw new Exception("Erreur API salaire médian : " . $response->getBody());
@@ -710,6 +715,36 @@ class Application_Model_Francetravail
 
         return json_decode($response->getBody(), true);
     }
+
+    public function getActiviteDetail($codeTypeActivite, $codeActivite)
+    {
+        $endpoint = "/v1/referentiel/activite";
+        $token = $this->getAccessTokenMarcheTravail();
+
+        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
+        $client->setMethod(Zend_Http_Client::GET);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json',
+        ]);
+
+        // Paramètres query
+        $client->setParameterGet([
+            'codeTypeActivite' => $codeTypeActivite, // ex: 'ROME'
+            'codeActivite'     => $codeActivite,     // ex: 'M1855'
+        ]);
+
+        $response = $client->request();
+
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API activité : " . $response->getBody());
+        }
+
+        return json_decode($response->getBody(), true);
+    }
+
+
+
 
     public function getStatsOffreEmploi($params)
     {
@@ -770,5 +805,70 @@ class Application_Model_Francetravail
 
         $data = json_decode($response->getBody(), true);
         return $data;
+    }
+
+
+
+    /***************************************
+     * IA
+     *******************************/
+
+    public function getAccessTokenIa()
+    {
+        if ($this->accessTokenIa && time() < $this->tokenIaExpiresAt) {
+            return $this->accessTokenIa;
+        }
+
+        $client = new Zend_Http_Client($this->tokenUrlIa);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
+        $client->setParameterPost([
+            'grant_type' => 'client_credentials',
+            'client_id' => $this->clientId,
+            'client_secret' => $this->clientSecret,
+            'scope' => $this->scopeIa
+        ]);
+        $client->setConfig(['timeout' => 30]);
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur Token : " . $response->getBody());
+        }
+        $data = json_decode($response->getBody(), true);
+        if (empty($data['access_token'])) {
+            throw new Exception("Impossible de récupérer le token");
+        }
+
+        $this->accessTokenIa = $data['access_token'];
+        $this->tokenIaExpiresAt = time() + ((int)$data['expires_in'] - 30);
+
+        return $this->accessTokenIa;
+    }
+
+
+    protected function callIaApi($endpoint, $body = null)
+    {
+        $token = $this->getAccessTokenIa();
+        $client = new Zend_Http_Client($this->apiBaseUrlIa . $endpoint);
+        $client->setMethod(Zend_Http_Client::POST);
+        $client->setHeaders([
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json',
+            'Content-Type'  => 'application/json',
+        ]);
+        $client->setRawData(json_encode($body), 'application/json');
+        $response = $client->request();
+
+        if (!$response->isSuccessful()) {
+            throw new Exception("Erreur API Marché du Travail : " . $response->getBody());
+        }
+
+        return json_decode($response->getBody(), true);
+    }
+
+    // --- Méthodes pour chaque indicateur ---
+
+    public function getDynamiqueEmploiIa($params)
+    {
+        return $this->callIaApi('/v1/indicateur/stat-dynamique-emploi', $params);
     }
 }

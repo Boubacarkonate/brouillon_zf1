@@ -294,14 +294,28 @@ class FranceTravailnewController extends Zend_Controller_Action
 
     public function entrepriserecrutementAction()
     {
+
+        $projet = [
+            "Projet 1" => ["coderome" => 'M1855', "codeInsee" => 75056],
+            "Projet 2" => ["coderome" => 'A1203', "codeInsee" => 13055],
+            "Projet 3" => ["coderome" => 'M1830', "codeInsee" => 92032],
+        ];
+
+
         $params = [
-            'citycode' => $this->_getParam('citycode'),
-            'rome'     => $this->_getParam('rome'),
+            // 'citycode' => $this->_getParam('citycode'),
+            // 'rome'     => $this->_getParam('rome'),
+            'citycode' => $this->_getParam('citycode', $projet['Projet 2']['codeInsee']),
+            'rome'     => $this->_getParam('rome', $projet['Projet 2']['coderome']),
+            // 'rome'     => $this->_getParam('rome'),
+
             'distance' => $this->_getParam('distance', 10)
         ];
 
         $annuaire = new Application_Model_Annuaire();
         $model    = new Application_Model_Francetravail();
+
+
 
         try {
             $resultats = $model->getLaBonneBoite($params);
@@ -320,6 +334,7 @@ class FranceTravailnewController extends Zend_Controller_Action
             // Passage à la vue
             // $this->view->adresse = $lacalisation;
             $this->view->items     = $items;
+            $this->view->projet     = $projet;
             $this->view->resultats = $resultats;
             $this->view->citycode  = $params['citycode'];
             $this->view->rome      = $params['rome'];
@@ -348,10 +363,10 @@ class FranceTravailnewController extends Zend_Controller_Action
 
 
 
+        $modelfrancetravalCommune = new Application_Model_Offrefrancetravail();
+        $insee = $modelfrancetravalCommune->getCommune();
 
-        $codeCommune = $this->_getParam('code_commune', '75120');
-
-
+        $codeCommune = $this->_getParam('code_commune', $insee);
         $theme       = $this->_getParam('theme', null);
         $type        = $this->_getParam('type', null);
         $source      = $this->_getParam('source', null);
@@ -373,9 +388,17 @@ class FranceTravailnewController extends Zend_Controller_Action
 
         $typeRecuperer = $model->getTypeServices();
         $allTypes = [];
-        foreach ($typeRecuperer as $key => $value) {
-            $allTypes[] = $value['label'];
+        foreach ($typeRecuperer as $t) {
+            // si ta source fournit un code (recommandé), on l'utilise comme clé
+            if (!empty($t['code'])) {
+                $allTypes[$t['code']] = $t['label'];   // ex: 'ACCOMP' => 'Accompagnement'
+            } else {
+                // sinon, on met le label comme clé aussi (pas idéal mais tolérable)
+                $allTypes[$t['label']] = $t['label'];
+            }
         }
+        $this->view->allTypes = $allTypes;
+        $this->view->type = $type; // la valeur envoyée par le form (GET 'type')
 
 
         $sourcesData = $model->getSources();
@@ -564,6 +587,8 @@ class FranceTravailnewController extends Zend_Controller_Action
             "Projet 5" => ["coderome" => 'C1503', "departement" => 13]
         ];
 
+
+
         $periode = [
             "ANNEE",
             "TRIMESTRE"
@@ -660,11 +685,12 @@ class FranceTravailnewController extends Zend_Controller_Action
                         'categorie'        => $v['libNomenclature'],
                         'nombre'           => $v['valeurPrincipaleNombre'] ?? null,
                         'pourcentage'      => $v['valeurSecondairePourcentage'] ?? null,
+
                         // 'caracteristiques' => $v['listeValeurParCaract'] ?? [],
                     ];
                 }
             }
-            // var_dump($demandeur12DerniersMois);
+            // var_dump($demandeurs12DerniersMois);
             // exit;
             $this->view->demandeur12DerniersMois = $demandeurDerniersMois;
 
@@ -834,6 +860,8 @@ class FranceTravailnewController extends Zend_Controller_Action
 
             try {
                 $ten = $model->getTensionRecrutement($paramsTension);
+                // var_dump($ten);
+                // exit;
 
                 // --- Initialisation des indicateurs ---
                 $tensionPrincipale       = null;  // Indicateur de tension global
@@ -940,8 +968,28 @@ class FranceTravailnewController extends Zend_Controller_Action
             }
 
             // salaire median
-            $salaire = $model->getStatsSalaire('DEP', $territoireCode);
-            $codeRomeCible = trim($codeRome); // code ROME demandé
+            $codeTypeActivite = 'ROME';
+            $codeActivite     = 'M1801';
+
+            $activiteDetail = $model->getActiviteDetail($codeTypeActivite, $codeActivite);
+
+            // echo '<pre>';
+            // print_r($activiteDetail);
+            // echo '</pre>';
+
+
+            $codeTypeTerritoire = 'DEP'; // ou NAT selon besoin
+            $codeTerritoire     = '75';
+            $codeRome           = 'M1855';
+
+            $salaire = $model->getStatsSalaire($codeTypeTerritoire, $codeTerritoire, $codeRome);
+
+            // echo '<pre>';
+            // print_r($salaire);
+            // echo '</pre>';
+            // exit;
+
+            $codeRomeCible = 'M1855'; // code ROME demandé
             $salaireStruct = [];
 
             try {
@@ -1138,6 +1186,25 @@ class FranceTravailnewController extends Zend_Controller_Action
             default:
                 return "Valeur : " . $valeur;
         }
+    }
+
+    public function iastatsAction()
+    {
+        $paramsDynamique = [
+            "codeTypeTerritoire" => "DEP",
+            "codeTerritoire"     => '75',
+            "codeTypeActivite"   => "MOYENNE",   // global sur le territoire
+            "codeActivite"       => "MOYENNE",   // idem
+            "codeTypePeriode"    => 'TRIMESTRE', //trimestre obligatoire
+            "dernierePeriode"    => true
+        ];
+
+        $model = new Application_Model_Francetravail();
+        $dynIa = $model->getDynamiqueEmploiIa($paramsDynamique);
+
+        var_dump($dynIa);
+
+        $this->view->dynIa = $dynIa;
     }
 
     public function dashboardAction()

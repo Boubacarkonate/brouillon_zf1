@@ -57,7 +57,7 @@ class Application_Model_Datainclusion
 
     public function getServices($params)
     {
-        $params['code_postal'] = $params['code_postal'] ?? 75020;
+        $params['code_postal'] = $params['code_postal'];
         return $this->callApi('/api/v1/services', $params);
     }
 

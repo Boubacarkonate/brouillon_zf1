@@ -104,4 +104,11 @@ class Application_Model_Offrefrancetravail extends Zend_Db_Table_Abstract
         // 4. Exemple d’utilisation
         return $result;
     }
+
+    public function getCommune()
+    {
+        $communeInsee = '75056';
+
+        return $communeInsee;
+    }
 }

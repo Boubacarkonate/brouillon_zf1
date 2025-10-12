@@ -1,40 +1,33 @@
-<h1 class="mb-4 text-primary">📊 Marché du travail local</h1>
+<h1 class="mb-4">Marché du travail local</h1>
 
 <!-- ======================= -->
 <!-- Formulaire de recherche -->
 <!-- ======================= -->
-<div class="card shadow-sm mb-4 border-0">
-    <div class="card-body">
-        <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label text-muted">Projet</label>
-                <select id="selectProjet" class="form-select shadow-sm">
-                    <option value="">-- Choisir un projet --</option>
-                    <?php foreach ($this->projet as $nom => $data): ?>
-                        <option value="<?= htmlspecialchars(json_encode($data)) ?>">
-                            <?= $this->escape($nom) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label class="form-label text-muted">Code territoire</label>
-                <input type="text" name="territoireCode" id="territoireCode" class="form-control shadow-sm"
-                    placeholder="Ex: 75" value="<?= $this->escape($this->territoireCode) ?>">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label text-muted">Code ROME</label>
-                <input type="text" name="codeRome" id="codeRome" class="form-control shadow-sm" placeholder="Ex: M1607"
-                    value="<?= $this->escape($this->codeRome) ?>">
-            </div>
-            <div class="col-md-2 d-grid">
-                <button type="submit" class="btn btn-secondary shadow-sm">
-                    <i class="bi bi-graph-up"></i> Analyser
-                </button>
-            </div>
-        </form>
+<form method="get" class="mb-4">
+    <div class="row g-2">
+        <div class="col-md-3">
+            <select id="selectProjet" class="form-select shadow-sm">
+                <option value="">-- Choisir un projet --</option>
+                <?php foreach ($this->projet as $nom => $data): ?>
+                    <option value="<?= htmlspecialchars(json_encode($data)) ?>">
+                        <?= $this->escape($nom) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="text" name="territoireCode" id="territoireCode" class="form-control shadow-sm"
+                placeholder="Code territoire (ex: 75)" value="<?= $this->escape($this->territoireCode) ?>">
+        </div>
+        <div class="col-md-2">
+            <input type="text" name="codeRome" id="codeRome" class="form-control shadow-sm"
+                placeholder="Code ROME (ex: M1607)" value="<?= $this->escape($this->codeRome) ?>">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Analyser</button>
+        </div>
     </div>
-</div>
+</form>
 
 <?php if (!empty($this->error)): ?>
     <div class="alert alert-danger">
@@ -42,222 +35,164 @@
     </div>
 <?php else: ?>
 
-    <!-- ======================= -->
-    <!-- Résumé marché -->
-    <!-- ======================= -->
-    <!-- Résumé marché avec bouton export -->
-    <div class="col-md-12 mt-3">
-        <a href="http://localhost/zf1/public/exportcsv.php" class="btn btn-outline-primary">
-            <i class="bi bi-download"></i> Export CSV
-        </a>
-    </div>
+    <div class="row row-cols-1 row-cols-md-3 g-4">
 
-    <div class="card mb-4 shadow-sm border-0">
-        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-            Résumé marché — Métier <?= $this->escape($this->codeRome) ?>, Territoire
-            <?= $this->escape($this->territoireCode) ?>
-            <button id="exportCsvBtn" class="btn btn-sm btn-outline-light">
-                <i class="bi bi-download"></i> Export CSV
-            </button>
-        </div>
-        <div class="card-body row g-3">
-            <?php if (!empty($this->dynamique)): ?>
-                <div class="col-md-3">
-                    <div class="badge bg-primary w-100 fs-6 p-3">📈 Dynamique :
-                        <?= $this->escape($this->dynamique['interpretation']) ?>
+        <!-- Dynamique -->
+        <?php if (!empty($this->dynamique)): ?>
+            <div class="col">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-header bg-primary text-white fw-bold">
+                        📈 Dynamique de l’emploi
                     </div>
-                </div>
-            <?php endif; ?>
-            <?php if (!empty($this->tensionPrincipale)): ?>
-                <div class="col-md-3">
-                    <div class="badge bg-warning text-dark w-100 fs-6 p-3">⚠️ Tension :
-                        <?= $this->escape($this->tensionPrincipale['valeur']) ?>
+                    <div class="card-body">
+                        <h5 class="card-title mb-2">
+                            <?= $this->escape($this->dynamique['territoire'] ?? '-') ?>
+                            (<?= $this->escape($this->dynamique['departement'] ?? '-') ?>)
+                        </h5>
+                        <p class="mb-2"><strong>Période :</strong> <?= $this->escape($this->dynamique['periodeLib'] ?? '-') ?>
+                        </p>
+                        <div class="alert alert-info py-2">
+                            <span class="badge bg-<?= $this->dynamique['badge'] ?? 'secondary' ?> fs-5 me-2">
+                                <?= $this->escape($this->dynamique['valeur'] ?? '-') ?>
+                            </span>
+                            <?= $this->escape($this->dynamique['interpretation'] ?? '-') ?>
+                        </div>
                     </div>
-                </div>
-            <?php endif; ?>
-            <?php if (!empty($this->dernierDemandeurs)): ?>
-                <div class="col-md-3">
-                    <div class="badge bg-info w-100 fs-6 p-3">👥 Demandeurs :
-                        <?= number_format($this->dernierDemandeurs['nombre'], 0, ',', ' ') ?>
+                    <div class="card-footer text-muted small">
+                        Maj : <?= $this->escape($this->dynamique['datMaj']) ?>
                     </div>
-                </div>
-            <?php endif; ?>
-            <?php if (!empty($this->embauches)): ?>
-                <div class="col-md-3">
-                    <div class="badge bg-success w-100 fs-6 p-3">💼 Embauches :
-                        <?= number_format($this->embauches['nombre'], 0, ',', ' ') ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- ======================= -->
-    <!-- Dynamique emploi -->
-    <!-- ======================= -->
-    <?php if (!empty($this->dynamique)): ?>
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-primary text-white">📈 Dynamique de l’emploi</div>
-            <div class="card-body">
-                <p><strong>Période :</strong> <?= $this->escape($this->dynamique['periodeLib'] ?? '-') ?></p>
-                <p><strong>Activité :</strong> <?= $this->escape($this->dynamique['activite'] ?? '-') ?></p>
-                <p><strong>Lieu :</strong> <?= $this->escape($this->dynamique['territoire'] ?? '-') ?>
-                    (<?= $this->escape($this->dynamique['departement'] ?? '-') ?>)</p>
-                <div class="alert alert-info mt-3">
-                    Indice : <span
-                        class="badge bg-<?= $this->dynamique['badge'] ?? 'secondary' ?>"><?= $this->escape($this->dynamique['valeur']) ?></span>
-                    — <?= $this->escape($this->dynamique['interpretation']) ?>
                 </div>
             </div>
-        </div>
-    <?php endif; ?>
+        <?php endif; ?>
 
-    <!-- ======================= -->
-    <!-- Dashboard Onglets -->
-    <!-- ======================= -->
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-secondary text-white">
-            <ul class="nav nav-tabs card-header-tabs" id="dashboardTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="indicateurs-tab" data-bs-toggle="tab" data-bs-target="#indicateurs"
-                        type="button" role="tab">📊 Indicateurs</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="embauches-tab" data-bs-toggle="tab" data-bs-target="#embauches"
-                        type="button" role="tab">💼 Embauches</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="salaire-tab" data-bs-toggle="tab" data-bs-target="#salaire" type="button"
-                        role="tab">💰 Salaire</button>
-                </li>
-            </ul>
-        </div>
-        <div class="card-body tab-content">
-            <!-- Indicateurs -->
-            <div class="tab-pane fade show active" id="indicateurs" role="tabpanel">
-                <div class="row g-3">
-                    <?php if (!empty($this->intensiteEmbauche)): ?>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Intensité embauche :</strong><br>
-                                <?= $this->escape($this->intensiteEmbauche['valeur']) ?> —
-                                <?= $this->escape($this->intensiteEmbauche['interpretation']) ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($this->manqueMainOeuvre)): ?>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Manque de main d’œuvre :</strong><br>
-                                <?= $this->escape($this->manqueMainOeuvre['valeur']) ?> —
-                                <?= $this->escape($this->manqueMainOeuvre['interpretation']) ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($this->attractiviteSalariale)): ?>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Attractivité salariale :</strong><br>
-                                <?= $this->escape($this->attractiviteSalariale['valeur']) ?> —
-                                <?= $this->escape($this->attractiviteSalariale['interpretation']) ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($this->conditionsTravail)): ?>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Conditions de travail :</strong><br>
-                                <?= $this->escape($this->conditionsTravail['valeur']) ?> —
-                                <?= $this->escape($this->conditionsTravail['interpretation']) ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($this->durabiliteEmploi)): ?>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Durabilité emploi :</strong><br>
-                                <?= $this->escape($this->durabiliteEmploi['valeur']) ?> —
-                                <?= $this->escape($this->durabiliteEmploi['interpretation']) ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($this->inadEquationGeo)): ?>
-                        <div class="col-md-4">
-                            <div class="p-3 bg-light rounded border">
-                                <strong>Inadéquation géographique :</strong><br>
-                                <?= $this->escape($this->inadEquationGeo['valeur']) ?> —
-                                <?= $this->escape($this->inadEquationGeo['interpretation']) ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
+        <!-- Tension -->
+        <?php if (!empty($this->tension)): ?>
+            <div class="col">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-header bg-danger text-white fw-bold">
+                        ⚠️ Tension de recrutement
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Métier :</strong> <?= $this->escape($this->tension['libActivite']) ?></p>
+                        <p><strong>Indice tension :</strong>
+                            <span class="badge <?php
+                                                if ($this->tension['valeur'] >= 1) echo 'bg-danger';
+                                                elseif ($this->tension['valeur'] > 0) echo 'bg-warning';
+                                                else echo 'bg-success'; ?>">
+                                <?= $this->escape($this->tension['interpretation']) ?>
+                            </span>
+                        </p>
+                    </div>
                 </div>
             </div>
+        <?php endif; ?>
 
-            <!-- Embauches -->
-            <div class="tab-pane fade" id="embauches" role="tabpanel">
-                <?php if (!empty($this->embauches)): ?>
-                    <p>Au <?= $this->escape($this->embauches['periodeLib']) ?>, dans le département
-                        <?= $this->escape($this->embauches['departement']) ?>, il y a eu
-                        <strong><?= number_format($this->embauches['nombre'], 0, ',', ' ') ?></strong> embauches pour le métier
-                        de
-                        <?= $this->escape($this->embauches['activite']) ?>.
-                    </p>
-                    <?php if (!empty($this->embauches['typeContrat'])): ?>
-                        <h6 class="mt-3">Répartition par type de contrat :</h6>
-                        <div class="row">
+        <!-- Indicateurs prioritaires -->
+        <?php if (!empty($this->intensiteEmbauche) || !empty($this->manqueMainOeuvre)): ?>
+            <div class="col">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-header bg-dark text-white fw-bold">
+                        ⭐ Indicateurs prioritaires
+                    </div>
+                    <div class="card-body">
+                        <?php if (!empty($this->intensiteEmbauche)): ?>
+                            <p><strong>Intensité d’embauche :</strong>
+                                <span class="badge bg-info"><?= $this->escape($this->intensiteEmbauche['interpretation']) ?></span>
+                            </p>
+                        <?php endif; ?>
+                        <?php if (!empty($this->manqueMainOeuvre)): ?>
+                            <p><strong>Manque de main d’œuvre :</strong>
+                                <span
+                                    class="badge bg-warning"><?= $this->escape($this->manqueMainOeuvre['interpretation']) ?></span>
+                            </p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Demandeurs -->
+        <?php if (!empty($this->demandeur12DerniersMois)): ?>
+            <div class="col">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-header bg-info text-white fw-bold">👥 Demandeurs d’emploi</div>
+                    <div class="card-body">
+                        <h2 class="fw-bold display-6 text-primary">
+                            <?= number_format($this->demandeur12DerniersMois['nombre'], 0, ',', ' ') ?>
+                        </h2>
+                        <p class="mb-1 fs-5">demandeurs d'emploi</p>
+                        <p class="text-muted mb-2">ont recherché ce métier au cours des 12 derniers mois</p>
+                        <p class="text-muted small mt-3">
+                            Source : France Travail, <?= $this->escape($this->demandeur12DerniersMois['periodeLib']) ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Embauches -->
+        <?php if (!empty($this->embauches)): ?>
+            <div class="col">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-header bg-success text-white fw-bold">💼 Embauches récentes</div>
+                    <div class="card-body">
+                        <h4 class="fw-bold text-success mb-3">
+                            <?= number_format($this->embauches['nombre'], 0, ',', ' ') ?>
+                        </h4>
+                        <p>pour le métier de <strong><?= $this->escape($this->embauches['activite']) ?></strong><br>
+                            au cours du <strong><?= $this->escape($this->embauches['periodeLib']) ?></strong>.</p>
+                        <p class="small text-muted mt-2">
+                            Source : France Travail, <?= $this->escape($this->embauches['periodeLib']) ?>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Répartition des contrats -->
+        <?php if (!empty($this->embauches['typeContrat'])): ?>
+            <div class="col-12">
+                <div class="card shadow-sm text-center">
+                    <div class="card-header bg-secondary text-white fw-bold">📄 Répartition des embauches du métier</div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-3">
                             <?php foreach ($this->embauches['typeContrat'] as $contrat): ?>
-                                <div class="col-md-4">
-                                    <div class="p-2 bg-light rounded border mb-2">
-                                        <?= $this->escape($contrat['libCaract']) ?> :
-                                        <?= number_format($contrat['nombre'], 0, ',', ' ') ?>
-                                        (<?= $contrat['pourcentage'] ?>%)
-                                    </div>
-                                </div>
+                                <?php if (!empty($contrat['nombre']) && $contrat['nombre'] > 0): ?>
+                                    <li><?= $this->escape($contrat['libCaract']) ?> (<?= $this->escape($contrat['pourcentage']) ?>%)
+                                    </li>
+                                <?php endif; ?>
                             <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                <?php else: ?>
-                    <p>Aucune donnée d’embauche disponible.</p>
-                <?php endif; ?>
+                        </ul>
+                        <p class="small text-muted mb-0">
+                            Source : Acoss &amp; MSA, <?= $this->escape($this->embauches['periodeLib']) ?>
+                        </p>
+                    </div>
+                </div>
             </div>
+        <?php endif; ?>
 
-            <!-- Salaire -->
-            <div class="tab-pane fade" id="salaire" role="tabpanel">
-                <?php if (!empty($this->salaireParRome)) : ?>
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Métier</th>
-                                <th>Période</th>
-                                <th>Débutant</th>
-                                <th>Moyen</th>
-                                <th>Expérimenté</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($this->salaireParRome as $s) : ?>
-                                <tr>
-                                    <td><?= $this->escape($s['activite']) ?></td>
-                                    <td><?= $this->escape($s['periode']) ?></td>
-                                    <td><?= $s['salaire1'] ? number_format($s['salaire1'], 0, ',', ' ') . ' €' : '-' ?></td>
-                                    <td><?= $s['salaire2'] ? number_format($s['salaire2'], 0, ',', ' ') . ' €' : '-' ?></td>
-                                    <td><?= $s['salaire3'] ? number_format($s['salaire3'], 0, ',', ' ') . ' €' : '-' ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                <?php else: ?>
-                    <p>Aucune donnée salariale disponible.</p>
-                <?php endif; ?>
+        <!-- Offres -->
+        <?php if (!empty($this->statsOffres)): ?>
+            <div class="col">
+                <div class="card h-100 shadow-sm text-center">
+                    <div class="card-header bg-primary text-white fw-bold">📊 Offres d’emploi</div>
+                    <div class="card-body">
+                        <h2 class="fw-bold display-6 text-primary">
+                            <?= number_format($this->statsOffres['nombre'], 0, ',', ' ') ?>
+                        </h2>
+                        <p class="mb-1 fs-5">offres d’emploi</p>
+                        <p class="text-muted mb-2">déposées par les employeurs et partenaires auprès de France Travail</p>
+                        <p class="small mb-0">au cours des 12 derniers mois pour ce métier</p>
+                        <p class="text-muted small mt-3">
+                            Source : France Travail, <?= $this->escape($this->statsOffres['periodeLib']) ?>
+                        </p>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
+        <?php endif; ?>
 
+    </div> <!-- fin de la grille -->
 <?php endif; ?>
-
-<!-- ======================= -->
-<!-- Script auto-remplissage projet -->
-<!-- ======================= -->
 <script>
     const selectProjet = document.getElementById('selectProjet');
     if (selectProjet) {
@@ -273,39 +208,4 @@
             }
         });
     }
-
-    document.getElementById('exportCsvBtn')?.addEventListener('click', function() {
-        const rows = [];
-        rows.push(['Indicateur', 'Valeur', 'Interprétation']);
-
-        <?php if (!empty($this->dynamique)): ?>
-            rows.push(['Dynamique', '<?= $this->escape($this->dynamique['valeur'] ?? '-') ?>',
-                '<?= $this->escape($this->dynamique['interpretation'] ?? '-') ?>'
-            ]);
-        <?php endif; ?>
-        <?php if (!empty($this->tension)): ?>
-            rows.push(['Tension', '<?= $this->escape($this->tension['valeur'] ?? '-') ?>',
-                '<?= $this->escape($this->tension['interpretation'] ?? '-') ?>'
-            ]);
-        <?php endif; ?>
-        <?php if (!empty($this->dernierDemandeurs)): ?>
-            rows.push(['Demandeurs', '<?= number_format($this->dernierDemandeurs['nombre'], 0, ',', ' ') ?>', '-']);
-        <?php endif; ?>
-        <?php if (!empty($this->dernieresEmbauches)): ?>
-            rows.push(['Embauches', '<?= number_format($this->dernieresEmbauches['nombre'], 0, ',', ' ') ?>', '-']);
-        <?php endif; ?>
-
-        // Créer le CSV
-        let csvContent = "data:text/csv;charset=utf-8," +
-            rows.map(e => e.join(";")).join("\n");
-
-        // Encoder URI et déclencher téléchargement
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "resume_marche_travail.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    });
 </script>
