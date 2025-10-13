@@ -1,0 +1,11 @@
+<div class="widget-priorite">
+    <?php foreach ($this->widgets as $p): ?>
+        <?php if (!empty($p['vr'])): ?>
+            <div class="priorite-item d-flex align-items-center mb-2">
+                <i class="fa-solid <?php echo $this->escape($p['iconify_code']); ?> me-2"
+                    style="color: <?php echo $this->escape($p['couleur']); ?>; width:18px; height:18px;"></i>
+                <span><?php echo $this->escape($p['libelle']); ?></span>
+            </div>
+        <?php endif ?>
+    <?php endforeach; ?>
+</div>
