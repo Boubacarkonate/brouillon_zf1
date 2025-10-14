@@ -1,0 +1,454 @@
+<?php
+function trouverDomaineParEnjeu($domaineCompetence, $codeEnjeu)
+{
+    if (empty($domaineCompetence)) return null;
+    foreach ($domaineCompetence as $dom) {
+        if (!empty($dom['enjeux'])) {
+            $enjeux = $dom['enjeux'];
+            if (isset($enjeux['code'])) {
+                $enjeux = [$enjeux]; // normaliser si un seul élément
+            }
+            foreach ($enjeux as $en) {
+                if (!empty($en['code']) && $en['code'] === $codeEnjeu) {
+                    return $dom['libelle'] ?? null;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+/* ----------------------------
+   1. Regrouper les compétences par domaine
+----------------------------- */
+$competencesParDomaine = [];
+
+if (!empty($this->ficheMetier['groupesCompetencesMobilisees'])) {
+    foreach ($this->ficheMetier['groupesCompetencesMobilisees'] as $groupe) {
+        $libelleDomaine = trouverDomaineParEnjeu($this->domaineCompetence, $groupe['enjeu']['code'] ?? '');
+        if (!$libelleDomaine) continue; // ignorer si aucun domaine trouvé
+        if (!isset($competencesParDomaine[$libelleDomaine])) {
+            $competencesParDomaine[$libelleDomaine] = [];
+        }
+        if (!empty($groupe['competences'])) {
+            foreach ($groupe['competences'] as $comp) {
+                $competencesParDomaine[$libelleDomaine][] = $comp;
+            }
+        }
+    }
+}
+
+/* ----------------------------
+   2. Regrouper les savoirs par catégorie
+----------------------------- */
+$savoirsParCategorie = [];
+
+if (!empty($this->ficheMetier['groupesSavoirs'])) {
+    $groupes = $this->ficheMetier['groupesSavoirs'];
+    if (isset($groupes['savoirs']) || isset($groupes['categorieSavoirs'])) {
+        $groupes = [$groupes]; // normaliser si un seul bloc
+    }
+
+    foreach ($groupes as $groupe) {
+        $categories = [];
+        if (!empty($groupe['categorieSavoirs'])) {
+            $categories = $groupe['categorieSavoirs'];
+            if (isset($categories['code'])) {
+                $categories = [$categories];
+            }
+        }
+        $savoirs = [];
+        if (!empty($groupe['savoirs'])) {
+            $savoirs = $groupe['savoirs'];
+            if (isset($savoirs['code'])) {
+                $savoirs = [$savoirs];
+            }
+        }
+
+        if ($categories) {
+            foreach ($categories as $cat) {
+                $libelleCat = $cat['libelle'] ?? '-';
+                if (!isset($savoirsParCategorie[$libelleCat])) {
+                    $savoirsParCategorie[$libelleCat] = [];
+                }
+                foreach ($savoirs as $savoir) {
+                    $savoirsParCategorie[$libelleCat][] = $savoir;
+                }
+            }
+        } elseif ($savoirs) {
+            // savoirs sans catégorie → regroupés sous "Autres savoirs"
+            if (!isset($savoirsParCategorie['Autres savoirs'])) {
+                $savoirsParCategorie['Autres savoirs'] = [];
+            }
+            foreach ($savoirs as $savoir) {
+                $savoirsParCategorie['Autres savoirs'][] = $savoir;
+            }
+        }
+    }
+}
+
+$savoirsEtre = [];
+
+if (!empty($this->ficheMetier['groupesCompetencesMobilisees'])) {
+    foreach ($this->ficheMetier['groupesCompetencesMobilisees'] as $groupe) {
+        if (!empty($groupe['competences'])) {
+            foreach ($groupe['competences'] as $comp) {
+                // Filtrer selon un type ou un indicateur "savoirEtre"
+                if (($comp['type'] ?? '') === 'SAVOIRE_ETRE') {
+                    $savoirsEtre[] = $comp;
+                }
+            }
+        }
+    }
+}
+?>
+<div class="container" id="fichemetier">
+    <!-- Formulaire sur une seule ligne -->
+    <form method="get" class="mb-4">
+        <div class="row g-2 align-items-end flex-nowrap">
+
+            <!-- Projet -->
+            <div class="col">
+                <label class="form-label text-muted mb-0">Projet</label>
+                <select id="selectProjet" name="projet" class="form-select shadow-sm">
+                    <option value="">-- Choisir un projet --</option>
+                    <?php foreach ($this->projet as $nom => $data): ?>
+                        <option value="<?= htmlspecialchars(json_encode($data)) ?>">
+                            <?= $this->escape($nom) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <!-- Code ROME -->
+            <div class="col">
+                <label for="codeRome" class="form-label text-muted mb-0">Code ROME</label>
+                <input type="text" id="codeRome" name="codeRome" class="form-control shadow-sm" placeholder="Ex: M1805"
+                    value="<?= htmlspecialchars($this->codeRome ?? '') ?>" required>
+            </div>
+
+            <!-- Bouton -->
+            <div class="col">
+                <button type="submit" class="btn btn-secondary shadow-sm w-100">
+                    <i class="fa-solid fa-search me-1"></i> Rechercher
+                </button>
+            </div>
+        </div>
+    </form>
+    <!-- enregistrer -->
+    <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer" title="Enregistrer le métier"
+        data-libelle="<?= htmlspecialchars($this->ficheMetier['metier']['libelle'] ?? '') ?>" data-module="fiche">
+        enregistrer
+    </button>
+    <?php if (!empty($this->ficheMetier['metier'])): ?>
+        <!-- Titre du métier -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <!-- Info métier -->
+                <div>
+                    <p class="text-muted mb-1"><?= htmlspecialchars($this->ficheMetier['metier']['code'] ?? '-') ?></p>
+                    <h3 class="card-title text-primary mb-0">
+                        <?= htmlspecialchars($this->ficheMetier['metier']['libelle']) ?>
+                    </h3>
+                </div>
+
+                <!-- Bouton -->
+                <div>
+                    <button id="btn-enregistrer" type="button" class="btn btn-outline-primary">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Enregistrer
+                    </button>
+                    <button id="btn-impression" type="button" class="btn btn-outline-primary ms-2">
+                        <i class="fa-solid fa-print me-1"></i> Imprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordion -->
+        <div class=" accordion" id="accordionMetier">
+            <!-- Description du métier -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingDescription">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseDescription" aria-expanded="true" aria-controls="collapseDescription">
+                        <i class="fa-solid fa-info-circle me-2 text-primary"></i>Description du métier
+                    </button>
+                </h2>
+                <div id="collapseDescription" class="accordion-collapse collapse show" aria-labelledby="headingDescription">
+                    <div class="accordion-body bg-white border rounded p-3">
+
+                        <!-- Définition -->
+                        <p class="text-primary mb-2"><strong>Les missions principales :</strong></p>
+                        <?php if (!empty($this->missionsMetier['definition'])): ?>
+                            <?php
+                            $lines = explode("\\n", $this->missionsMetier['definition']);
+                            ?>
+                            <ul class="mb-3">
+                                <?php foreach ($lines as $line): ?>
+                                    <?php if (trim($line) !== ''): ?>
+                                        <li><?= htmlspecialchars($line) ?></li>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <p class="text-muted mb-3">Aucune description disponible.</p>
+                        <?php endif; ?>
+
+                        <!-- Accès emploi -->
+                        <?php if (!empty($this->missionsMetier['accesEmploi'])): ?>
+                            <?php
+                            $linesAcces = explode("\\n", $this->missionsMetier['accesEmploi']);
+                            ?>
+                            <p class="text-primary mb-1"><strong>Accès emploi :</strong></p>
+                            <ul class="mb-3">
+                                <?php foreach ($linesAcces as $line): ?>
+                                    <?php if (trim($line) !== ''): ?>
+                                        <li><?= htmlspecialchars($line) ?></li>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+
+
+                        <!-- Appellations -->
+                        <?php if (!empty($this->missionsMetier['appellations'])): ?>
+                            <p class="text-primary mb-2"><strong>Appellations :</strong></p>
+                            <div class="row mb-3">
+                                <?php foreach ($this->missionsMetier['appellations'] as $appellation): ?>
+                                    <div class="col-md-4 col-sm-6 mb-2">
+                                        <div title="<?= htmlspecialchars($appellation['libelle'] ?? '') ?>"
+                                            class="bg-light border rounded px-2 py-1 small text-truncate">
+                                            <?= htmlspecialchars($appellation['libelle'] ?? '') ?>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+
+                        <!-- Domaine professionnel et secteur -->
+                        <!-- <?php if (!empty($this->missionsMetier['domaineProfessionnel'])): ?>
+                            <?php
+                                    $domaine = $this->missionsMetier['domaineProfessionnel'];
+                                    $libelleDomaine = $domaine['libelle'] ?? '';
+                                    $libelleGrandDomaine = $domaine['grandDomaine']['libelle'] ?? '';
+                            ?>
+                            <div class="mb-3">
+                                <strong class="text-primary me-2">Domaine :</strong>
+                                <span class="badge bg-info text-dark"><?= htmlspecialchars($libelleDomaine) ?></span>
+                            </div>
+                            <div class="mb-3">
+                                <strong class="text-primary me-2">Grand domaine :</strong>
+                                <span class="badge bg-warning text-dark"><?= htmlspecialchars($libelleGrandDomaine) ?></span>
+                            </div>
+                        <?php endif; ?> -->
+
+                        <?php if (!empty($this->missionsMetier['secteursActivitesLies'][0]['secteurActivite'])): ?>
+                            <div class="mb-3">
+                                <strong class="text-primary me-2 secteur-activite">Secteur d'activité :</strong>
+                                <span class="badge bg-success text-white">
+                                    <?= htmlspecialchars($this->missionsMetier['secteursActivitesLies'][0]['secteurActivite']['libelle']) ?>
+                                </span>
+                            </div>
+                        <?php endif; ?>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Savoir-faire -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingSavoirFaire">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseSavoirFaire" aria-expanded="false" aria-controls="collapseSavoirFaire">
+                        <i class="fa-solid fa-briefcase me-2 text-primary"></i>Savoir-faire
+                    </button>
+                </h2>
+                <div id="collapseSavoirFaire" class="accordion-collapse collapse" aria-labelledby="headingSavoirFaire">
+                    <div class="accordion-body">
+                        <?php if (!empty($competencesParDomaine)) : ?>
+                            <?php foreach ($competencesParDomaine as $domaine => $competences): ?>
+                                <div class="mb-5">
+                                    <h6 class="fw-bold text-primary"><?= htmlspecialchars($domaine) ?></h6>
+                                    <ul class="list-group list-group-flush">
+                                        <?php foreach ($competences as $comp): ?>
+                                            <li class="list-group-item small">
+                                                <?= htmlspecialchars($comp['libelle']) ?>
+                                                <span class="badge bg-secondary ms-2"><?= htmlspecialchars($comp['code']) ?></span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                    <!-- <div class="row g-2">  en row
+                                        <?php foreach ($competences as $comp): ?>
+                                            <div class="col-md-4 col-sm-6">
+                                                <div class="border rounded px-2 py-1 small d-flex justify-content-between align-items-center">
+                                                    <span><?= htmlspecialchars($comp['libelle']) ?></span>
+                                                    <span class="badge bg-secondary ms-2"><?= htmlspecialchars($comp['code']) ?></span>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div> -->
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <p class="text-muted">Aucun savoir-faire trouvé.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Savoirs -->
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingSavoirs">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseSavoirs" aria-expanded="false" aria-controls="collapseSavoirs">
+                        <i class="fa-solid fa-book-open me-2 text-primary"></i>Savoirs
+                    </button>
+                </h2>
+                <div id="collapseSavoirs" class="accordion-collapse collapse" aria-labelledby="headingSavoirs">
+                    <div class="accordion-body">
+                        <?php if (!empty($savoirsParCategorie)) : ?>
+                            <?php foreach ($savoirsParCategorie as $categorie => $savoirs): ?>
+                                <div class="mb-3">
+                                    <h6 class="fw-bold text-primary"><?= htmlspecialchars($categorie) ?></h6>
+                                    <ul class="list-group list-group-flush">
+                                        <?php foreach ($savoirs as $savoir): ?>
+                                            <li class="list-group-item small">
+                                                <?= htmlspecialchars($savoir['libelle']) ?>
+                                                <span class="badge bg-secondary ms-2"><?= htmlspecialchars($savoir['code']) ?></span>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else : ?>
+                            <p class="text-muted">Aucun savoir trouvé.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
+
+<script>
+    const K = <?= json_encode($this->K) ?>;
+
+    // Projet → remplir automatiquement les champs
+    const selectProjet = document.getElementById('selectProjet');
+    if (selectProjet) {
+        selectProjet.addEventListener('change', function() {
+            if (this.value) {
+                try {
+                    const data = JSON.parse(this.value);
+                    if (data.coderome) {
+                        document.getElementById('codeRome').value = data.coderome;
+                    }
+                } catch (e) {
+                    console.error("Erreur JSON projet :", e);
+                }
+            }
+        });
+    }
+
+
+    const btnimpression = document.getElementById('btn-impression');
+    btnimpression.addEventListener('click', () => {
+        document.querySelectorAll('.accordion-collapse').forEach(el => {
+            el.classList.add('show');
+        });
+
+        document.querySelectorAll('h6, h3, p').forEach(el => {
+            el.classList.remove('text-primary');
+        });
+
+        document.querySelector('.secteur-activite').classList.remove('text-primary');
+
+        document.querySelectorAll('.badge.bg-success').forEach(el => {
+            el.classList.remove('bg-success');
+            el.classList.add('bg-secondary');
+        });
+
+        document.querySelectorAll('.accordion-button').forEach(el => {
+            el.classList.add('bg-secondary', 'text-white');
+        });
+
+        const ficheMetierImpression = document.getElementById('fichemetier');
+
+        const contenu = ficheMetierImpression.outerHTML;
+
+        const win = window.open();
+
+        win.document.write(`<html><head><title>Fiche metier - France Travail</title>`);
+        win.document.write('<link rel="stylesheet" href="/css/bootstrap.min.css">');
+        win.document.write('<link rel="stylesheet" href="/css/uxcouleurs.css">');
+        win.document.write(`
+                <style>
+                    @media print {
+                        body {
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        form {
+                            display: none;
+                        }
+                        #btn-impression {
+                            display: none;
+                        }
+                        .accordion-button::after {
+                            display: none !important;
+                        } 
+                        .accordion-collapse {
+                            display: block !important;
+                            visibility: visible !important;
+                            height: auto !important;
+                        }
+                </style>
+            `);
+
+        win.document.write('</head><body>');
+        win.document.write(contenu);
+        win.document.write('</body></html>');
+        win.document.close();
+
+        win.onload = function() {
+            win.focus();
+            win.print();
+            win.close();
+        };
+    });
+
+    $(document).ready(function() {
+        $(document).on('click', '.btn-enregistrer', function() {
+            const btn = $(this);
+
+            // Récupération des données du bouton
+            const fiche = {
+                K: K,
+                libelle: btn.data('libelle'),
+                url: window.location.href, // 👈 récupère l'URL complète de la page
+                module: btn.data('module')
+            };
+
+            console.log("📦 Données envoyées :", fiche);
+
+            $.ajax({
+                url: '/francetravail/enregistreroffre',
+                method: 'POST',
+                dataType: 'json',
+                data: fiche,
+                success: function(res) {
+                    if (res.success) {
+                        alert("✅ Fiche métier enregistrée !");
+                    } else {
+                        alert("❌ Erreur : " + (res.message ||
+                            "Impossible d'enregistrer la fiche."));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Erreur AJAX :", status, error, xhr.responseText);
+                    alert("⚠️ Erreur réseau (" + status + ")");
+                }
+            });
+        });
+    });
+</script>

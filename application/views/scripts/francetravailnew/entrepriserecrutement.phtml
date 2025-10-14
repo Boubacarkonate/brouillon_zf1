@@ -8,17 +8,18 @@
     <div class="card-body">
         <form method="get" class="d-flex flex-nowrap align-items-end gap-3 overflow-auto">
 
-            <div style="min-width:220px;">
+            <div style="min-width:180px;">
                 <label class="form-label text-muted">Projet</label>
                 <select id="selectProjet" class="form-select shadow-sm">
-                    <option value="">-- Choisir un projet --</option>
-                    <?php foreach ($this->projet as $nom => $data): ?>
-                        <option value="<?= htmlspecialchars(json_encode($data)) ?>">
+                    <option value="">-- Choisir projet --</option>
+                    <?php foreach ($this->projets as $nom => $data): ?>
+                        <option value="<?= htmlspecialchars(json_encode(array_merge($data, ['nomProjet' => $nom]))) ?>">
                             <?= $this->escape($nom) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
             </div>
+
 
             <div style="min-width:220px;">
                 <label class="form-label text-muted">Ville / Code postal</label>
@@ -195,12 +196,25 @@
     $(document).ready(function() {
         $(document).on('click', '.btn-enregistrer', function() {
             const btn = $(this);
+            // Récupérer le projet sélectionné
+            let projetNom = '';
+            const projetSelect = $('#selectProjet').val();
+            if (projetSelect) {
+                try {
+                    const data = JSON.parse(projetSelect);
+                    projetNom = data.nomProjet || '';
+                } catch (e) {
+                    console.error("Erreur JSON projet :", e);
+                }
+            }
+
 
             const entreprise = {
                 libelle: btn.data('libelle'),
                 latitude: btn.data('lat'),
                 longitude: btn.data('lon'),
-                module: btn.data('module')
+                module: btn.data('module'),
+                projet: projetNom
             };
 
             console.log(entreprise);

@@ -7,57 +7,44 @@ class Application_Model_Francetravail
     protected $clientId     = 'PAR_testapi_19b477525c48be9f209ef6ecf3d32c5dd263b49155428a75a3fac7c3d1cf0622';
     protected $clientSecret = '995a6c8f95c51ce4910d62046da086933f5d38bc2c7b2193f35ca6be3c819598';
     protected $tokenUrl     = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire';
-    protected $apiBaseUrl   = 'https://api.francetravail.io/partenaire/offresdemploi/v2';
-    protected $scope        = 'api_offresdemploiv2 o2dsoffre';
-    protected $apiBaseUrlCompetence   = 'https://api.francetravail.io/partenaire/rome-competences/v1/competences';
-    protected $scopeCompetence        = 'api_rome-competencesv1 nomenclatureRome';
-    protected $accessToken;
-    protected $apiBaseUrlFicheMetier   = 'https://api.francetravail.io/partenaire/rome-fiches-metiers';
-    protected $scopeFicheMetier        = 'api_rome-fiches-metiersv1 nomenclatureRome';
-    protected $accessTokenFicheMetier;
-    protected $tokenExpiresAt;
-    protected $tokenCompetenceExpiresAt;
-    protected $tokenFicheMetierExpiresAt;
-    protected $accessTokenCompetence;
 
-    protected $apiBaseUrlBonneBoite   = 'https://api.francetravail.io/partenaire/labonneboite/v2';
-    protected $scopeBonneBoite        = 'api_labonneboitev2 search office';
-    protected $accessTokenBonneBoite;
-    protected $tokenBonneBoiteExpiresAt;
+    protected $tokens = [];
+    protected $tokenExpirations = [];
 
-    protected $apiBaseUrlMarcheTravail   = 'https://api.francetravail.io/partenaire/stats-offres-demandes-emploi';
-    protected $scopeMarcheTravail       = 'offresetdemandesemploi api_stats-offres-demandes-emploiv1';
-    protected $accessTokenMarcheTravail;
-    protected $tokenMarcheTravail;
-    protected $tokenMarcheTravailExpiresAt;
+    protected $apiEndpoints = [
+        'offres'        => 'https://api.francetravail.io/partenaire/offresdemploi/v2',
+        'competence'    => 'https://api.francetravail.io/partenaire/rome-competences/v1/competences',
+        'ficheMetier'   => 'https://api.francetravail.io/partenaire/rome-fiches-metiers/v1/fiches-rome',
+        'metierRome'    => 'https://api.francetravail.io/partenaire/rome-metiers/v1/metiers',
+        'matchSkills'   => 'https://api.francetravail.io/partenaire/matchviasoftskills/v1/professions/job_skills',
+        'bonneBoite'    => 'https://api.francetravail.io/partenaire/labonneboite/v2',
+        'marcheTravail' => 'https://api.francetravail.io/partenaire/stats-offres-demandes-emploi/v1/indicateur'
+    ];
 
-
-    protected $apiBaseUrlIa   = 'https://api.francetravail.io/partenaire/stats-informations-territoire';
-    protected $scopeIa       = 'infosterritoire api_stats-informations-territoirev1';
-    protected $accessTokenIa;
-    protected $tokenUrlIa = 'https://entreprise.francetravail.fr/connexion/oauth2/access_token?realm=/partenaire';
-    protected $tokenIaExpiresAt;
+    protected $scopes = [
+        'offres'        => 'api_offresdemploiv2 o2dsoffre',
+        'competence'    => 'api_rome-competencesv1 nomenclatureRome',
+        'ficheMetier'   => 'api_rome-fiches-metiersv1 nomenclatureRome',
+        'metierRome'    => 'api_rome-metiersv1 nomenclatureRome',
+        'matchSkills'   => 'api_matchviasoftskillsv1',
+        'bonneBoite'    => 'api_labonneboitev2 search office',
+        'marcheTravail' => 'offresetdemandesemploi api_stats-offres-demandes-emploiv1'
+    ];
 
 
 
+    /* ============================================================
+       UTILITAIRES COMMUNS
+       ============================================================ */
 
-    // === Instarlink (Match via Soft Skills) ===
-    // protected $instarlinkApiId     = 'TON_API_ID';
-    // protected $instarlinkApiKey    = 'TON_API_KEY';
-    // protected $instarlinkBaseUrl   = 'https://dev.instarlink.com/api/v1/professions/job_skills';
-
-
-
-
-
-    public function getAccessToken()
+    private function getAccessToken(string $scopeKey)
     {
-        if ($this->accessToken && $this->tokenExpiresAt && time() < $this->tokenExpiresAt) {
-            error_log("[FranceTravail] Utilisation du token existant");
-            return $this->accessToken;
+        if (isset($this->tokens[$scopeKey]) && time() < $this->tokenExpirations[$scopeKey]) {
+            error_log("[FranceTravail][$scopeKey] Utilisation du token existant");
+            return $this->tokens[$scopeKey];
         }
 
-        error_log("[FranceTravail] Demande d'un nouveau token");
+        error_log("[FranceTravail][$scopeKey] Récupération d’un nouveau token...");
 
         $client = new Zend_Http_Client($this->tokenUrl);
         $client->setMethod(Zend_Http_Client::POST);
@@ -66,7 +53,7 @@ class Application_Model_Francetravail
             'grant_type'    => 'client_credentials',
             'client_id'     => $this->clientId,
             'client_secret' => $this->clientSecret,
-            'scope'         => $this->scope
+            'scope'         => $this->scopes[$scopeKey] ?? ''
         ]);
         $client->setConfig([
             'timeout' => 30,
@@ -80,795 +67,207 @@ class Application_Model_Francetravail
 
         $response = $client->request();
         if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur Token : " . $response->getBody());
-            throw new Exception("Erreur Token : " . $response->getBody());
+            throw new Exception("[FranceTravail][$scopeKey] Erreur Token : " . $response->getBody());
         }
 
         $data = json_decode($response->getBody(), true);
         if (empty($data['access_token'])) {
-            error_log("[FranceTravail] Impossible de récupérer le token : " . $response->getBody());
-            throw new Exception("Impossible de récupérer le token : " . $response->getBody());
+            throw new Exception("[FranceTravail][$scopeKey] Token manquant : " . $response->getBody());
         }
 
-        $this->accessToken = $data['access_token'];
+        $this->tokens[$scopeKey] = $data['access_token'];
+        $this->tokenExpirations[$scopeKey] = time() + (int)$data['expires_in'] - 30;
 
-        if (!empty($data['expires_in'])) {
-            $this->tokenExpiresAt = time() + (int) $data['expires_in'] - 30;
-        }
-
-        error_log("[FranceTravail] Token récupéré avec succès");
-        return $this->accessToken;
+        return $this->tokens[$scopeKey];
     }
 
-    /* france travail widget */
-    public function getTokenWidget()
+    private function createClient($url, $token, $method = 'GET', $isJson = false)
     {
-        return $this->getAccessToken();
+        $client = new Zend_Http_Client($url);
+        $client->setMethod($method);
+        $headers = [
+            'Authorization' => 'Bearer ' . $token,
+            'Accept'        => 'application/json'
+        ];
+        if ($isJson) {
+            $headers['Content-Type'] = 'application/json';
+        }
+        $client->setHeaders($headers);
+        $client->setConfig([
+            'timeout' => 30,
+            'adapter' => 'Zend_Http_Client_Adapter_Curl',
+            'curloptions' => [
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
+            ]
+        ]);
+        return $client;
     }
 
-    /* france travail personnalisé */
+    private function request($client)
+    {
+        $response = $client->request();
+        if (!$response->isSuccessful()) {
+            throw new Exception("[FranceTravail] Erreur API : " . $response->getBody());
+        }
+        return json_decode($response->getBody(), true);
+    }
+
+    /* ============================================================
+       API : OFFRES D’EMPLOI
+       ============================================================ */
+
     public function searchOffres(array $params = [])
     {
-        $token = $this->getAccessToken();
+        $token = $this->getAccessToken('offres');
 
-        error_log("[FranceTravail] Recherche offres avec params : " . json_encode($params));
-
-        $apiParams = [];
-        $allowedParams = [
-            'motsCles',
-            'departement',
-            'distance',
-            'codeROME',
-            'commune',
-            'accesTravailleurHandicape',
-            'origineOffre',
-            'natureContrat',
-            'typeContrat',
-            'qualification',
-            'experience',
-            'dureeHebdo',
-            'salaireMin',
-            'salaireMax',
-            'offresManqueCandidats',
-            'offresEures',
-            'publieeDepuis',
-            'minCreationDate',
-            'maxCreationDate',
-            'minPublicationDate',
-            'maxPublicationDate',
-            'minModificationDate',
-            'maxModificationDate',
-            'agregation',
-            'niveauFormations',
-            'secteursActivites'
-        ];
-
-        // On ajoute automatiquement l'agrégation pour récupérer typeContrat
         if (empty($params['agregation'])) {
             $params['agregation'] = ['typeContrat'];
         }
 
-        foreach ($allowedParams as $key) {
-            if (!empty($params[$key])) {
-                $apiParams[$key] = $params[$key];
-            }
-        }
-
-        $perPage = isset($params['perPage']) ? (int)$params['perPage'] : 20;
-        $page    = isset($params['page']) ? (int)$params['page'] : 0;
+        // pagination
+        $perPage = (int)($params['perPage'] ?? 20);
+        $page    = (int)($params['page'] ?? 0);
         $start   = $page * $perPage;
-        $end     = $start + $perPage - 1;
-        $apiParams['range'] = "$start-$end";
+        $params['range'] = "$start-" . ($start + $perPage - 1);
 
-        error_log("[FranceTravail] Params API préparés : " . json_encode($apiParams));
+        $url = $this->apiEndpoints['offres'] . '/offres/search';
+        $client = $this->createClient($url, $token);
+        $client->setParameterGet($params);
 
-        $client = new Zend_Http_Client($this->apiBaseUrl . '/offres/search');
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json'
-        ]);
-        $client->setParameterGet($apiParams);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
+        $data = $this->request($client);
 
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur API : " . $response->getBody());
-            throw new Exception("Erreur API : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        error_log("[FranceTravail] Réponse API reçue : " . json_encode($data));
-
-
-        // Récupération automatique des valeurs valides typeContrat
-        $typeContratValues = [];
+        // extraire typeContrat
+        $data['typeContratValues'] = [];
         if (!empty($data['filtresPossibles'])) {
             foreach ($data['filtresPossibles'] as $filtre) {
                 if ($filtre['filtre'] === 'typeContrat') {
                     foreach ($filtre['agregation'] as $val) {
-                        $typeContratValues[] = $val['valeurPossible'];
+                        $data['typeContratValues'][] = $val['valeurPossible'];
                     }
                 }
             }
         }
-        $data['typeContratValues'] = $typeContratValues;
 
         return $data;
     }
 
-
-    public function getReferentiel(string $type): array
+    public function getReferentiel(string $type)
     {
-        $token = $this->getAccessToken(); // ou récupère ton token depuis le modèle
-        $url = "https://api.francetravail.io/partenaire/offresdemploi/v2/referentiel/$type";
+        $token = $this->getAccessToken('offres');
+        $url = $this->apiEndpoints['offres'] . "/referentiel/$type";
+        $client = $this->createClient($url, $token);
+        $data = $this->request($client);
 
-        $client = new Zend_Http_Client($url);
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json'
-        ]);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur API référentiel $type : " . $response->getBody());
-            return [];
-        }
-
-        $data = json_decode($response->getBody(), true);
-        // transformer en tableau code => libellé
         $referentiel = [];
         foreach ($data as $item) {
             $referentiel[$item['code']] = $item['libelle'] ?? $item['code'];
         }
-
         return $referentiel;
     }
 
+    /* ============================================================
+       API : COMPÉTENCES
+       ============================================================ */
 
-    public function getAccessTokenCompetence()
+    public function domaineCompetence(array $params = [])
     {
-        if ($this->accessTokenCompetence && $this->tokenCompetenceExpiresAt && time() < $this->tokenCompetenceExpiresAt) {
-            error_log("[FranceTravail] Utilisation du token existant");
-            return $this->accessTokenCompetence;
-        }
-
-        error_log("[FranceTravail] Demande d'un nouveau token");
-
-        $client = new Zend_Http_Client($this->tokenUrl);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'scope'         => $this->scopeCompetence
-        ]);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur Token : " . $response->getBody());
-            throw new Exception("Erreur Token : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        if (empty($data['access_token'])) {
-            error_log("[FranceTravail] Impossible de récupérer le token : " . $response->getBody());
-            throw new Exception("Impossible de récupérer le token : " . $response->getBody());
-        }
-
-        $this->accessTokenCompetence = $data['access_token'];
-
-        if (!empty($data['expires_in'])) {
-            $this->tokenCompetenceExpiresAt = time() + (int) $data['expires_in'] - 30;
-        }
-
-        error_log("[FranceTravail] Token récupéré avec succès");
-        return $this->accessTokenCompetence;
-    }
-
-    /* france travail widget */
-    public function getTokenWidgetcompetence()
-    {
-        return $this->getAccessTokenCompetence();
-    }
-
-    public function searchCompetence(array $params = [])
-    {
-        $token = $this->getAccessTokenCompetence();
-
-        error_log("[FranceTravail] Recherche compétences avec params : " . json_encode($params));
-
-        $apiParams = [];
-        $allowedParams = ['libelle', 'code'];
-        foreach ($allowedParams as $key) {
-            if (!empty($params[$key])) {
-                $apiParams[$key] = $params[$key];
-            }
-        }
-
-        $client = new Zend_Http_Client($this->apiBaseUrlCompetence . '/competence');
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json'
-        ]);
-        $client->setParameterGet($apiParams);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur API Compétence : " . $response->getBody());
-            throw new Exception("Erreur API Compétence : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        error_log("[FranceTravail] Réponse API compétences : " . json_encode($data));
-        return $data;
-    }
-
-    public function tokenFicheRome()
-    {
-        if ($this->accessTokenFicheMetier && $this->tokenFicheMetierExpiresAt && time() < $this->tokenFicheMetierExpiresAt) {
-            error_log("[FranceTravail] Utilisation du token existant");
-            return $this->accessTokenFicheMetier;
-        }
-
-        error_log("[FranceTravail] Demande d'un nouveau token");
-
-        $client = new Zend_Http_Client($this->tokenUrl);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'scope'         => $this->scopeFicheMetier
-        ]);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur Token : " . $response->getBody());
-            throw new Exception("Erreur Token : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        if (empty($data['access_token'])) {
-            error_log("[FranceTravail] Impossible de récupérer le token : " . $response->getBody());
-            throw new Exception("Impossible de récupérer le token : " . $response->getBody());
-        }
-
-        $this->accessTokenFicheMetier = $data['access_token'];
-
-        if (!empty($data['expires_in'])) {
-            $this->tokenFicheMetierExpiresAt = time() + (int) $data['expires_in'] - 30;
-        }
-
-        error_log("[FranceTravail] Token récupéré avec succès");
-        return $this->accessTokenFicheMetier;
-    }
-
-
-    public function getAccessTokenFicheRome()
-    {
-        return $this->tokenFicheRome();
-    }
-    public function ficheMetier(array $params = [])
-    {
-        $codeMetier = 'M1607'; // tu pourras le passer en paramètre ensuite si tu veux
-
-        // Récupération du token
-        $token = $this->getAccessTokenFicheRome();
-        error_log("[FranceTravail] Token pour fiche-metier : " . substr($token, 0, 10) . '...');
-
-        // Appel API fiche-metier
-        $client = new Zend_Http_Client($this->apiBaseUrlFicheMetier . '/v1/fiches-rome/fiche-metier/' . $codeMetier);
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json'
-        ]);
+        $token = $this->getAccessToken('competence');
+        $url = $this->apiEndpoints['competence'] . '/domaine-competence';
+        $client = $this->createClient($url, $token);
         $client->setParameterGet($params);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl'
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API fiche-metier : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        error_log("[FranceTravail] Réponse fiche-metier : " . substr($response->getBody(), 0, 200) . '...');
-        return $data;
+        return $this->request($client);
     }
 
-    protected function getAccessTokenSkills()
+    /* ============================================================
+       API : FICHE MÉTIER
+       ============================================================ */
+
+    public function ficheMetier(string $codeMetier)
     {
-        $client = new Zend_Http_Client('https://entreprise.francetravail.io/partenaire/oauth2/token');
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'scope' => 'api_matchviasoftskillsv1'
-        ]);
-
-        $response = $client->request('POST');
-        if ($response->isSuccessful()) {
-            $data = json_decode($response->getBody(), true);
-            return $data['access_token'] ?? null;
-        }
-
-        throw new Exception("Impossible d'obtenir le token OAuth : " . $response->getStatus() . ' ' . $response->getMessage());
+        $token = $this->getAccessToken('ficheMetier');
+        $url = $this->apiEndpoints['ficheMetier'] . "/fiche-metier/$codeMetier";
+        $client = $this->createClient($url, $token);
+        return $this->request($client);
     }
 
-    public function fetchSoftSkillsByRome($codeRome)
+    /* ============================================================
+       API : MÉTIER & ROME
+       ============================================================ */
+
+    public function getMetierByCodeRome(array $params = [], string $codeRome)
     {
-        $token = $this->getAccessTokenSkills();
-
-        $client = new Zend_Http_Client('https://api.francetravail.io/partenaire/matchviasoftskills/v1/professions/job_skills');
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Content-Type'  => 'application/json'
-        ]);
-        $client->setParameterGet(['code' => $codeRome]);
-
-        $response = $client->request('POST');
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API France Travail : " . $response->getStatus() . ' ' . $response->getMessage());
-        }
-
-        return json_decode($response->getBody(), true);
+        $token = $this->getAccessToken('metierRome');
+        $url = $this->apiEndpoints['metierRome'] . '/metier/' . urlencode($codeRome);
+        $client = $this->createClient($url, $token);
+        $client->setParameterGet($params);
+        return $this->request($client);
     }
 
-    // ---------------------------
-    // TOKEN Bonne Boite
-    // ---------------------------
-    public function tokenBonneBoite()
-    {
-        if ($this->accessTokenBonneBoite && $this->tokenBonneBoiteExpiresAt && time() < $this->tokenBonneBoiteExpiresAt) {
-            error_log("[FranceTravail] Utilisation du token existant - Bonne Boite");
-            return $this->accessTokenBonneBoite;
-        }
+    /* ============================================================
+       API : LA BONNE BOÎTE
+       ============================================================ */
 
-        error_log("[FranceTravail - Bonne Boite] Demande d'un nouveau token");
-
-        $client = new Zend_Http_Client($this->tokenUrl);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->clientId,     // ⚠️ mettre ton clientId BonneBoite
-            'client_secret' => $this->clientSecret, // ⚠️ mettre ton clientSecret BonneBoite
-            'scope'         => $this->scopeBonneBoite         // ⚠️ ex: 'api_labonneboite'
-        ]);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur Token Bonne Boite : " . $response->getBody());
-            throw new Exception("Erreur Token Bonne Boite : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        if (empty($data['access_token'])) {
-            error_log("[FranceTravail] Impossible de récupérer le token Bonne Boite : " . $response->getBody());
-            throw new Exception("Impossible de récupérer le token Bonne Boite : " . $response->getBody());
-        }
-
-        $this->accessTokenBonneBoite = $data['access_token'];
-        if (!empty($data['expires_in'])) {
-            $this->tokenBonneBoiteExpiresAt = time() + (int)$data['expires_in'] - 30;
-        }
-
-        error_log("[FranceTravail] Token Bonne Boite récupéré avec succès");
-        return $this->accessTokenBonneBoite;
-    }
-
-    public function getAccessTokenBonneBoite()
-    {
-        return $this->tokenBonneBoite();
-    }
-
-    // ---------------------------
-    // API Bonne Boite : recherche
-    // ---------------------------
     public function getLaBonneBoite(array $params = [])
     {
-        $token = $this->getAccessTokenBonneBoite();
-        error_log("[FranceTravail] Token pour Bonne Boite : " . substr($token, 0, 10) . "...");
-
-        $client = new Zend_Http_Client($this->apiBaseUrlBonneBoite . '/recherche');
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json'
-        ]);
+        $token = $this->getAccessToken('bonneBoite');
+        $url = $this->apiEndpoints['bonneBoite'] . '/recherche';
+        $client = $this->createClient($url, $token);
         $client->setParameterGet($params);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl'
-        ]);
-
-        $response = $client->request();
-
-        error_log("[FranceTravail] Code HTTP API Bonne Boite : " . $response->getStatus());
-        error_log("[FranceTravail] Corps de la réponse Bonne Boite : " . substr($response->getBody(), 0, 200) . "...");
-
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API Bonne Boite : " . $response->getBody());
-        }
-
-        return json_decode($response->getBody(), true);
+        return $this->request($client);
     }
 
-    // ---------------------------
-    // MARCHE EMPLOI LOCAL
-    // ---------------------------
+    /* ============================================================
+       API : MARCHÉ DU TRAVAIL
+       ============================================================ */
 
-
-    public function tokenMarcheTravail()
+    private function callMarcheTravail($endpoint, $body = null, $method = 'POST')
     {
-        if ($this->accessTokenMarcheTravail && $this->tokenMarcheTravailExpiresAt && time() < $this->tokenMarcheTravailExpiresAt) {
-            error_log("[FranceTravail] Utilisation du token existant");
-            return $this->accessTokenMarcheTravail;
+        $token = $this->getAccessToken('marcheTravail');
+        $url = $this->apiEndpoints['marcheTravail'] . $endpoint;
+        $client = $this->createClient($url, $token, $method, true);
+        if ($body) {
+            $client->setRawData(json_encode($body), 'application/json');
         }
-
-        error_log("[FranceTravail - MAtch skills] Demande d'un nouveau token");
-
-        $client = new Zend_Http_Client($this->tokenUrl);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type'    => 'client_credentials',
-            'client_id'     => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'scope'         => $this->scopeMarcheTravail
-        ]);
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl',
-            'curloptions' => [
-                CURLOPT_SSL_VERIFYPEER => true,
-                CURLOPT_SSL_VERIFYHOST => 2,
-                CURLOPT_SSLVERSION     => CURL_SSLVERSION_TLSv1_2
-            ]
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            error_log("[FranceTravail] Erreur Token - La Bonne Boite : " . $response->getBody());
-            throw new Exception("Erreur Token : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        if (empty($data['access_token'])) {
-            error_log("[FranceTravail] Impossible de récupérer le token - La Bonne Boite : " . $response->getBody());
-            throw new Exception("Impossible de récupérer le token - La Bonne Boite : " . $response->getBody());
-        }
-
-        $this->accessTokenMarcheTravail = $data['access_token'];
-
-        if (!empty($data['expires_in'])) {
-            $this->tokenMarcheTravailExpiresAt = time() + (int)$data['expires_in'] - 30;
-        }
-
-        error_log("[FranceTravail] Token récupéré avec succès - La Bonne Boite");
-        return $this->accessTokenMarcheTravail;
+        return $this->request($client);
     }
-
-    // public function getAccessTokenMarcheTravail() {
-    //     return $this->tokenMarcheTravail();
-    // }
-
-
-    // --- Gestion du token ---
-    public function getAccessTokenMarcheTravail()
-    {
-        if ($this->accessTokenMarcheTravail && time() < $this->tokenMarcheTravailExpiresAt) {
-            return $this->accessTokenMarcheTravail;
-        }
-
-        $client = new Zend_Http_Client($this->tokenUrl);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type' => 'client_credentials',
-            'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'scope' => $this->scopeMarcheTravail
-        ]);
-        $client->setConfig(['timeout' => 30]);
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur Token : " . $response->getBody());
-        }
-        $data = json_decode($response->getBody(), true);
-        if (empty($data['access_token'])) {
-            throw new Exception("Impossible de récupérer le token");
-        }
-
-        $this->accessTokenMarcheTravail = $data['access_token'];
-        $this->tokenMarcheTravailExpiresAt = time() + ((int)$data['expires_in'] - 30);
-
-        return $this->accessTokenMarcheTravail;
-    }
-
-    // --- Appel générique API ---
-    protected function callApi($endpoint, $body = null)
-    {
-        $token = $this->getAccessTokenMarcheTravail();
-        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json',
-            'Content-Type'  => 'application/json',
-        ]);
-        $client->setRawData(json_encode($body), 'application/json');
-        $response = $client->request();
-
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API Marché du Travail : " . $response->getBody());
-        }
-
-        return json_decode($response->getBody(), true);
-    }
-
-    // --- Méthodes pour chaque indicateur ---
 
     public function getDynamiqueEmploi($params)
     {
-        return $this->callApi('/v1/indicateur/stat-dynamique-emploi', $params);
+        return $this->callMarcheTravail('/stat-dynamique-emploi', $params);
     }
 
     public function getEmbauches($params)
     {
-        return $this->callApi('/v1/indicateur/stat-embauches', $params);
+        return $this->callMarcheTravail('/stat-embauches', $params);
     }
 
     public function getDemandeurs($params)
     {
-        return $this->callApi('/v1/indicateur/stat-demandeurs', $params);
+        return $this->callMarcheTravail('/stat-demandeurs', $params);
     }
 
     public function getDemandeurs12DerniersMois($params)
     {
-        return $this->callApi('/v1/indicateur/stat-demandeurs-entrant', $params);
+        return $this->callMarcheTravail('/stat-demandeurs-entrant', $params);
     }
 
     public function getTensionRecrutement($params)
     {
-        return $this->callApi('/v1/indicateur/stat-perspective-employeur', $params);
+        return $this->callMarcheTravail('/stat-perspective-employeur', $params);
     }
 
-    public function getStatsSalaire($codeTypeTerritoire, $codeTerritoire, $codeRome)
+    public function getStatsSalaire($typeTerritoire, $codeTerritoire)
     {
-        $endpoint = "/v1/indicateur/salaire-rome-fap/{$codeTypeTerritoire}/{$codeTerritoire}?codeRome={$codeRome}";
-        $token = $this->getAccessTokenMarcheTravail();
-
-        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json',
-        ]);
-
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API salaire médian : " . $response->getBody());
-        }
-
-        return json_decode($response->getBody(), true);
+        $token = $this->getAccessToken('marcheTravail');
+        $url = "https://api.francetravail.io/partenaire/stats-offres-demandes-emploi/v1/indicateur/salaire-rome-fap/{$typeTerritoire}/{$codeTerritoire}";
+        $client = $this->createClient($url, $token);
+        return $this->request($client);
     }
-
-    public function getActiviteDetail($codeTypeActivite, $codeActivite)
-    {
-        $endpoint = "/v1/referentiel/activite";
-        $token = $this->getAccessTokenMarcheTravail();
-
-        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $endpoint);
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json',
-        ]);
-
-        // Paramètres query
-        $client->setParameterGet([
-            'codeTypeActivite' => $codeTypeActivite, // ex: 'ROME'
-            'codeActivite'     => $codeActivite,     // ex: 'M1855'
-        ]);
-
-        $response = $client->request();
-
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API activité : " . $response->getBody());
-        }
-
-        return json_decode($response->getBody(), true);
-    }
-
-
-
 
     public function getStatsOffreEmploi($params)
     {
-        return $this->callApi('/v1/indicateur/stat-offres', $params);
-    }
-
-    // --- Méthode pour récupérer le libellé d'un territoire ---
-    public function getLibelleTerritoire($codeTerritoire)
-    {
-        $referentiel = $this->getReferentielDesIndicateurs('/v1/referentiel/types-territoires');
-        foreach ($referentiel['listeTypesTerritoiresIndicateur'] ?? [] as $territoire) {
-            if ($territoire['codeTerritoire'] == $codeTerritoire) {
-                return $territoire['libelleTerritoire'];
-            }
-        }
-        return $codeTerritoire; // fallback si non trouvé
-    }
-
-    // --- Méthode pour récupérer le libellé d'un code ROME ---
-    public function getLibelleRome($codeRome)
-    {
-        $referentiel = $this->getReferentielDesIndicateurs('/v1/referentiel/romes');
-        foreach ($referentiel['listeRomes'] ?? [] as $rome) {
-            if ($rome['codeRome'] == $codeRome) {
-                return $rome['libelleRome'];
-            }
-        }
-        return $codeRome;
-    }
-
-
-    public function getReferentielDesIndicateurs($indicateur)
-    {
-
-        $token = $this->getAccessTokenMarcheTravail();
-        error_log("[FranceTravail] Token pour le Referentiel des indicateur du Marche local : " . substr($token, 0, 10) . "...");
-
-        $client = new Zend_Http_Client($this->apiBaseUrlMarcheTravail . $indicateur);
-        $client->setMethod(Zend_Http_Client::GET);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json'
-        ]);
-
-        $client->setConfig([
-            'timeout' => 30,
-            'adapter' => 'Zend_Http_Client_Adapter_Curl'
-        ]);
-
-        $response = $client->request();
-
-        error_log("[FranceTravail] Code HTTP API : " . $response->getStatus());
-        error_log("[FranceTravail] Corps de la réponse : " . substr($response->getBody(), 0, 200) . "...");
-
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API Le rReferentiel mache du travail local : " . $response->getBody());
-        }
-
-        $data = json_decode($response->getBody(), true);
-        return $data;
-    }
-
-
-
-    /***************************************
-     * IA
-     *******************************/
-
-    public function getAccessTokenIa()
-    {
-        if ($this->accessTokenIa && time() < $this->tokenIaExpiresAt) {
-            return $this->accessTokenIa;
-        }
-
-        $client = new Zend_Http_Client($this->tokenUrlIa);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders(['Content-Type' => 'application/x-www-form-urlencoded']);
-        $client->setParameterPost([
-            'grant_type' => 'client_credentials',
-            'client_id' => $this->clientId,
-            'client_secret' => $this->clientSecret,
-            'scope' => $this->scopeIa
-        ]);
-        $client->setConfig(['timeout' => 30]);
-        $response = $client->request();
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur Token : " . $response->getBody());
-        }
-        $data = json_decode($response->getBody(), true);
-        if (empty($data['access_token'])) {
-            throw new Exception("Impossible de récupérer le token");
-        }
-
-        $this->accessTokenIa = $data['access_token'];
-        $this->tokenIaExpiresAt = time() + ((int)$data['expires_in'] - 30);
-
-        return $this->accessTokenIa;
-    }
-
-
-    protected function callIaApi($endpoint, $body = null)
-    {
-        $token = $this->getAccessTokenIa();
-        $client = new Zend_Http_Client($this->apiBaseUrlIa . $endpoint);
-        $client->setMethod(Zend_Http_Client::POST);
-        $client->setHeaders([
-            'Authorization' => 'Bearer ' . $token,
-            'Accept'        => 'application/json',
-            'Content-Type'  => 'application/json',
-        ]);
-        $client->setRawData(json_encode($body), 'application/json');
-        $response = $client->request();
-
-        if (!$response->isSuccessful()) {
-            throw new Exception("Erreur API Marché du Travail : " . $response->getBody());
-        }
-
-        return json_decode($response->getBody(), true);
-    }
-
-    // --- Méthodes pour chaque indicateur ---
-
-    public function getDynamiqueEmploiIa($params)
-    {
-        return $this->callIaApi('/v1/indicateur/stat-dynamique-emploi', $params);
+        return $this->callMarcheTravail('/stat-offres', $params);
     }
 }

@@ -1,0 +1,489 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<style>
+    .pagination-sticky {
+        /* position: sticky;
+        bottom: 0;
+        background-color: white;
+        padding: 0.5rem 0;
+        z-index: 10;
+        box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1); */
+    }
+
+    .col-md-3 .overflow-auto {
+        padding-bottom: 70px;
+    }
+
+    .blocpopover {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-height: 80vh;
+        width: 60%;
+        background-color: white;
+        z-index: 1050;
+        border-radius: 0.5rem;
+        overflow-y: auto;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        display: none;
+        padding: 1rem;
+    }
+
+    #popover-background {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 1040;
+        display: none;
+    }
+
+    .blocpopover .popover-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #6c757d;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    .blocpopover .nav-tabs {
+        margin-bottom: 1rem;
+    }
+
+    .spinner {
+        width: 60px;
+        height: 60px;
+        border: 6px solid #ddd;
+        border-top-color: #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+<!-- Loader Overlay -->
+<div id="spinner-overlay" style="
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+">
+    <div class="spinner"></div>
+</div>
+
+<!-- 🔍 Filtres modernisés -->
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body">
+        <form method="get" class="d-flex flex-nowrap align-items-end gap-3 overflow-auto">
+
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Code commune</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
+                    <input type="text" name="code_commune" class="form-control border-start-0"
+                        value="<?= $this->escape($this->codeCommune) ?>" placeholder="Ex : 75120">
+                </div>
+            </div>
+
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Thématique</label>
+                <select name="theme" class="form-select shadow-sm">
+                    <option value="">Toutes</option>
+                    <?php foreach ($this->thematique as $value => $label): ?>
+                        <option value="<?= $this->escape($value) ?>" <?= ($this->themeValue == $value ? 'selected' : '') ?>>
+                            <?= $this->escape($label) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Type</label>
+                <select name="type" class="form-select shadow-sm">
+                    <option value="">Tous</option>
+                    <?php foreach ($this->allTypes as $value => $label): ?>
+                        <option value="<?= $this->escape($value) ?>" <?= ($this->typeValue == $value ? 'selected' : '') ?>>
+                            <?= $this->escape($label) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div style="min-width:180px;">
+                <label class="form-label text-muted">Source</label>
+                <select name="source" class="form-select shadow-sm">
+                    <option value="">Toutes</option>
+                    <?php foreach ($this->sourcesList as $slug => $nom): ?>
+                        <option value="<?= $this->escape($slug) ?>" <?= ($this->source == $slug ? 'selected' : '') ?>>
+                            <?= $this->escape($nom) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div style="min-width:200px;">
+                <label class="form-label text-muted">Mot-clé</label>
+                <div class="input-group shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0"
+                        value="<?= $this->escape($this->q) ?>" placeholder="Rechercher...">
+                </div>
+            </div>
+
+            <div class="d-grid" style="min-width:150px;">
+                <button id="enregistrer" type="submit" class="btn btn-secondary shadow-sm">
+                    <i class="bi bi-funnel"></i> Rechercher
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 🗂 Liste + Carte -->
+<div id="mainContent" class="d-none">
+    <div class="row">
+        <div class="col-md-3 d-flex flex-column position-relative" style="max-height:80vh;">
+            <?php if (!empty($this->services)): ?>
+                <div class="d-flex flex-column gap-3 pb-0 overflow-auto" style="max-height:80vh;">
+                    <?php foreach ($this->services as $idx => $s): ?>
+                        <?php
+                        $desc = $s['structure']['description'] ?? '';
+                        $descTronquee = strlen($desc) > 120 ? substr($desc, 0, 120) . '...' : $desc;
+                        ?>
+                        <div class="card shadow-sm" data-service-idx="<?= $idx ?>">
+                            <div class="card-body d-flex justify-content-between">
+                                <div>
+                                    <h5 class="card-title text-primary"><?= $this->escape($s['structure']['nom'] ?? '') ?></h5>
+                                    <p class="card-text small text-muted">
+                                        <?= $this->escape($descTronquee) ?>
+                                        <?php if (strlen($desc) > 120): ?>
+                                            <button type="button" class="btn btn-link btn-sm p-0 lire-suite-btn"
+                                                data-service-idx="<?= $idx ?>">Lire la suite</button>
+                                        <?php endif; ?>
+                                    </p>
+
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <?php if (!empty($s['theme'])): ?>
+                                            <?php foreach ($s['theme'] as $t): ?>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($s['frais'])): ?>
+                                            <span class="badge bg-success"><?= $this->escape($s['frais']) ?></span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($s['type'])): ?>
+                                            <span class="badge bg-success"><?= $this->escape($s['type']) ?></span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($s['source'])): ?>
+                                            <span class="badge bg-info"><?= $this->escape($s['source']) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        <?php if (!empty($s['adresse'])): ?>
+                                            <span
+                                                class="badge bg-success"><?= $this->escape($s['structure']['adresse']) . ' ' . $this->escape($s['structure']['code_postal'])  ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex flex-column gap-2">
+                                    <?php $hasCoords = !empty($s['lat']) && !empty($s['lon']); ?>
+                                    <button type="button"
+                                        class="btn btn-outline-secondary btn-sm voir-carte-btn <?= $hasCoords ? '' : 'disabled' ?>"
+                                        title="Voir sur la carte" data-service-idx="<?= $idx ?>">
+                                        carte
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer"
+                                        data-service-idx="<?= $idx ?>"
+                                        data-libelle="<?= $this->escape($s['structure']['nom'] ?? '') ?>"
+                                        data-url="<?= $this->escape($s['structure']['site_web'] ?? '') ?>"
+                                        data-lat="<?= $this->escape($s['structure']['latitude'] ?? '') ?>"
+                                        data-lon="<?= $this->escape($s['structure']['longitude'] ?? '') ?>"
+                                        data-module="services">
+                                        <!-- 👈 module ajouté -->
+
+                                        enregistrer
+                                    </button>
+
+
+                                </div>
+                            </div>
+
+                            <!-- Modal détails -->
+                            <div id="customPopover-<?= $idx ?>" class="blocpopover">
+                                <div class="popover-header">
+                                    <span>Détails du service</span>
+                                    <button type="button" class="btn-close btn-close-white fermer-popover"></button>
+                                </div>
+                                <div class="p-3">
+                                    <ul class="nav nav-tabs" id="serviceTabs-<?= $idx ?>" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" data-bs-toggle="tab"
+                                                data-bs-target="#infos-<?= $idx ?>">Infos</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" data-bs-toggle="tab"
+                                                data-bs-target="#desc-<?= $idx ?>">Description</button>
+                                        </li>
+                                    </ul>
+
+                                    <div class="tab-content border p-3">
+                                        <div class="tab-pane fade show active" id="infos-<?= $idx ?>">
+                                            <p><strong>Adresse :</strong>
+                                                <?= $this->escape($s['structure']['adresse'] ?? 'N/A') ?>
+                                            </p>
+                                            <p><strong>Commune :</strong>
+                                                <?= $this->escape($s['structure']['commune'] ?? 'N/A') ?>
+                                            </p>
+                                            <p><strong>Téléphone :</strong>
+                                                <?= $this->escape($s['structure']['telephone'] ?? 'N/A') ?></p>
+                                            <p><strong>Courriel :</strong>
+                                                <?= $this->escape($s['structure']['courriel'] ?? 'N/A') ?></p>
+                                            <p><strong>Site web :</strong>
+                                                <?= $this->escape($s['structure']['site_web'] ?? 'N/A') ?></p>
+                                        </div>
+                                        <div class="tab-pane fade" id="desc-<?= $idx ?>">
+                                            <p><?= nl2br($this->escape($s['structure']['description'] ?? 'Pas de description')) ?>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <!-- Pagination-->
+                <?php
+                $currentPage = $this->page;
+                $params = $this->params;
+                $perPage = $this->perPage;
+                $offresCount = count($this->services ?? []);
+
+                $hasNextPage = $offresCount === $perPage;
+
+                $window = 2;
+
+
+                // Pages à afficher
+                $pages = [];
+                for ($i = max(0, $currentPage - $window); $i <= $currentPage + $window; $i++) {
+                    if ($i === $currentPage + 1 && !$hasNextPage) break;
+                    $pages[] = $i;
+                }
+                ?>
+
+                <nav aria-label="Pagination" class="position-sticky bottom-0">
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item <?= ($currentPage <= 0) ? 'disabled' : '' ?>">
+                            <a class="page-link"
+                                href="<?= ($currentPage > 0) ? '?' . http_build_query(array_merge($params, ['page' => $currentPage - 1])) : '#' ?>">
+                                &laquo; Précédent
+                            </a>
+                        </li>
+                        <?php foreach ($pages as $i): ?>
+                            <li class="page-item <?= ($i === $currentPage) ? 'active' : '' ?>">
+                                <a class="page-link"
+                                    href="<?= ($i === $currentPage) ? '#' : '?' . http_build_query(array_merge($params, ['page' => $i])) ?>">
+                                    <?= $i + 1 ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                        <li class="page-item <?= !$hasNextPage ? 'disabled' : '' ?>">
+                            <a class="page-link"
+                                href="<?= $hasNextPage ? '?' . http_build_query(array_merge($params, ['page' => $currentPage + 1])) : '#' ?>">
+                                Suivant &raquo;
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+
+
+            <?php else: ?>
+                <div class="alert alert-info">Aucun service trouvé.</div>
+            <?php endif; ?>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    <div id="map" class="border rounded" style="height:80vh;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="popover-background"></div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const spinner = document.getElementById('spinner-overlay');
+        const content = document.getElementById('mainContent');
+        const services = <?= json_encode($this->services ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+
+        // Affiche le spinner immédiatement
+        spinner.style.display = "flex";
+        content.classList.add('d-none');
+
+        // -----------------------
+        // 🗺️ Initialisation carte
+        // -----------------------
+        const map = L.map("map").setView([46.5, 2.5], 6);
+        const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+        tileLayer.addTo(map);
+
+        const markers = L.markerClusterGroup();
+        const markerMap = {};
+
+        services.forEach((s, idx) => {
+            const lat = s.lat ?? s.structure?.lat ?? null;
+            const lon = s.lon ?? s.structure?.lon ?? null;
+            if (lat && lon) {
+                const marker = L.marker([lat, lon]).bindPopup(
+                    `<strong>${s.structure?.nom ?? s.label ?? ''}</strong><br>
+                 ${s.structure?.adresse ?? ''}<br>${s.structure?.commune ?? ''}`
+                );
+                markers.addLayer(marker);
+                markerMap[idx] = marker;
+            }
+        });
+
+        map.addLayer(markers);
+
+        if (markers.getLayers().length) {
+            map.fitBounds(markers.getBounds());
+        }
+
+        // -----------------------
+        // 🌀 Synchronisation loader
+        // -----------------------
+        let mapReady = false;
+        let domReady = false;
+        let markersReady = true;
+
+        function maybeHideSpinner() {
+            if (mapReady && domReady && markersReady) {
+                setTimeout(() => {
+                    spinner.style.display = "none";
+                    content.classList.remove('d-none');
+
+                    // 👇 Corrige le problème de carte non rendue
+                    setTimeout(() => {
+                        map.invalidateSize();
+                        if (markers.getLayers().length) {
+                            map.fitBounds(markers.getBounds());
+                        }
+                    }, 100);
+                }, 200);
+            }
+        }
+
+        // Quand Leaflet a fini de charger ses tuiles
+        tileLayer.on('load', () => {
+            mapReady = true;
+            maybeHideSpinner();
+        });
+
+        // Quand le DOM est prêt
+        window.requestAnimationFrame(() => {
+            setTimeout(() => {
+                domReady = true;
+                maybeHideSpinner();
+            }, 300);
+        });
+
+        // -----------------------
+        // 🎯 Boutons : zoom carte
+        // -----------------------
+        document.querySelectorAll('.voir-carte-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = btn.dataset.serviceIdx;
+                const marker = markerMap[idx];
+                if (marker) {
+                    markers.zoomToShowLayer(marker, () => marker.openPopup());
+                }
+            });
+        });
+
+        // -----------------------
+        // 📑 Popovers détails
+        // -----------------------
+        const bg = document.getElementById('popover-background');
+        document.querySelectorAll('.lire-suite-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = btn.dataset.serviceIdx;
+                const pop = document.getElementById(`customPopover-${idx}`);
+                if (pop) {
+                    pop.style.display = 'block';
+                    bg.style.display = 'block';
+                }
+            });
+        });
+
+        document.querySelectorAll('.fermer-popover').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const pop = btn.closest('.blocpopover');
+                if (pop) pop.style.display = 'none';
+                bg.style.display = 'none';
+            });
+        });
+
+        bg.addEventListener('click', () => {
+            document.querySelectorAll('.blocpopover').forEach(p => p.style.display = 'none');
+            bg.style.display = 'none';
+        });
+    });
+
+    $(document).ready(function() {
+        $(document).on('click', '.btn-enregistrer', function() {
+            const btn = $(this);
+
+            // Récupération des données du bouton
+            const service = {
+                libelle: btn.data('libelle'),
+                url: btn.data('url'),
+                latitude: btn.data('lat'),
+                longitude: btn.data('lon'),
+                module: btn.data('module')
+            };
+
+            console.log("Données à enregistrer :", service);
+
+            $.ajax({
+                url: '/zf1/public/francetravailnew/enregistreroffre',
+                method: 'POST',
+                dataType: 'json',
+                data: service,
+                success: function(res) {
+                    if (res.success) {
+                        alert("✅ Structure enregistrée !");
+                    } else {
+                        alert("❌ Erreur : " + (res.message ||
+                            "Impossible d'enregistrer la structure."));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Erreur AJAX :", status, error, xhr.responseText);
+                    alert("⚠️ Erreur réseau (" + status + ")");
+                }
+            });
+        });
+    });
+</script>

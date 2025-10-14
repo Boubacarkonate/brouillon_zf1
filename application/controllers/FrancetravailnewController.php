@@ -2,16 +2,133 @@
 
 class FranceTravailnewController extends Zend_Controller_Action
 {
-    public function init()
-    {
-        // parent::init();
+    public function init() {}
 
-        // error_log("[FranceTravailController] Init du contrôleur");
+
+
+
+    public function metiercompetenceAction()
+    {
+
+
+        // Paramètres de l'API France Travail
+        $paramsFicheMetier = [
+            'champs' => 'code,groupescompetencesmobilisees(competences(libelle,code),enjeu(libelle,code)),groupessavoirs(savoirs(libelle,code),categoriesavoirs(libelle,code)),metier(libelle,code)'
+        ];
+
+        $paramsDomaineCompetence = [
+            'champs' => 'code,libelle,enjeux(objectifs(libelle,macrocompetences(libelle,transferable,@macrosavoiretreprofessionnel(qualiteprofessionnelle),souscategorie,code,riasecmineur,codearborescence,transitionecologique,transitionnumerique,codeogr,maturite,riasecmajeur),code,codearborescence),libelle,code,codearborescence)'
+        ];
+
+        $paramsDescriptionMetier = [
+            'emploireglemente,formacodes(libelle,code),libelle,domaineprofessionnel(libelle,granddomaine(libelle,code),code),obsolete,code,definition,secteursactiviteslies(secteuractivite(libelle,code,secteuractivite(libelle,code)),principal),divisionsnaf(libelle,code),riasecmajeur,transitionecologiquedetaillee,themes(libelle,code),transitionecologique,datefin,competencesmobiliseesprincipales(libelle,@macrosavoiretreprofessionnel(riasecmajeur,riasecmineur),@competencedetaillee(riasecmajeur,riasecmineur),code,@macrosavoirfaire(riasecmajeur,riasecmineur),codeogr),emploicadre,riasecmineur,transitionnumerique,contextestravail(libelle,code,categorie),codeisco,centresinterets(libelle,code),competencesmobilisees(libelle,@macrosavoiretreprofessionnel(riasecmajeur,riasecmineur),@competencedetaillee(riasecmajeur,riasecmineur),code,@macrosavoirfaire(riasecmajeur,riasecmineur),codeogr),transitiondemographique,secteursactivites(libelle,code,secteuractivite(libelle,code)),appellations(emploireglemente,transitionecologiquedetaillee,libelle,code,emploicadre,transitionecologique,transitionnumerique,transitiondemographique,classification,libellecourt,competencescles(frequence,competence(libelle,codeogr,code))),competencesmobiliseesemergentes(libelle,@macrosavoiretreprofessionnel(riasecmajeur,riasecmineur),@competencedetaillee(riasecmajeur,riasecmineur),code,@macrosavoirfaire(riasecmajeur,riasecmineur),codeogr),centresinteretslies(centreinteret(libelle,code),principal),accesemploi'
+        ];
+
+        // Projets fictifs
+        $projet = [
+            "Projet 1" => ["coderome" => 'M1805'],
+            "Projet 2" => ["coderome" => 'A1203'],
+            "Projet 3" => ["coderome" => 'M1830'],
+            "Projet 4" => ["coderome" => 'N1101'],
+            "Projet 5" => ["coderome" => 'C1503']
+        ];
+
+        $codeRome = $this->_getParam('codeRome', $projet['Projet 1']['coderome']);
+
+        $francetravail = new Application_Model_Francetravail();
+
+        try {
+
+            //pour le partial
+            $dashboardData = $this->getDashboardData();
+            $this->view->dashboardData = $dashboardData;
+
+            $missionsMetier = $francetravail->getMetierByCodeRome($paramsDescriptionMetier, $codeRome);
+
+            $ficheMetier       = $francetravail->ficheMetier($codeRome, $paramsFicheMetier);
+            $domaineCompetence = $francetravail->domaineCompetence($paramsDomaineCompetence);
+
+            $this->view->domaineCompetence = $domaineCompetence;
+            $this->view->ficheMetier       = $ficheMetier;
+            $this->view->codeRome          = $codeRome;
+            $this->view->missionsMetier = $missionsMetier;
+            $this->view->projet = $projet;
+            $this->view->error             = null;
+        } catch (Exception $e) {
+            $this->view->domaineCompetence = [];
+            $this->view->ficheMetier       = [];
+            $this->view->codeRome          = $codeRome;
+            $this->view->error             = $e->getMessage();
+        }
     }
 
 
+    public function entrepriserecrutementAction()
+    {
+
+
+        $projet = [
+            "Projet 1" => ["codeRome" => 'M1855', "codeInsee" => 92050],
+            "Projet 2" => ["codeRome" => 'A1203', "codeInsee" => 79185],
+            "Projet 3" => ["codeRome" => 'M1830', "codeInsee" => 31003],
+            "Projet 4" => ["codeRome" => 'N1101', "codeInsee" => 64005],
+            "Projet 5" => ["codeRome" => 'C1503', "codeInsee" => 80008]
+        ];
+
+        $params = [
+            // 'citycode'   => $this->_getParam('citycode'),
+            // 'rome'       => $this->_getParam('rome'),
+            'citycode' => $this->_getParam('citycode', $projet['Projet 1']['codeInsee']),
+            'rome'     => $this->_getParam('rome', $projet['Projet 1']['codeRome']),
+            'distance'   => $this->_getParam('distance', 10),
+            'page'       => $this->_getParam('page', 1),
+            'page_size'  => $this->_getParam('page_size', 100)
+        ];
+
+        $annuaire = new Application_Model_Annuaire();
+        $model    = new Application_Model_Francetravail();
+
+        try {
+            error_log("[BonneBoiteController] Recherche Bonne Boite avec params : " . json_encode($params));
+
+
+            $resultats   = $model->getLaBonneBoite($params);
+
+
+            $total      = $resultats['hits'] ?? 0;
+            $page       = (int) $params['page'];
+            $page_size  = (int) $params['page_size'];
+            $nbPages    = $page_size > 0 ? ceil($total / $page_size) : 1;
+
+            $entreprises = $resultats['results'] ?? $resultats ?? [];
+
+
+            $this->view->resultats = $entreprises;
+            $this->view->citycode  = $params['citycode'];
+            $this->view->rome      = $params['rome'];
+            $this->view->distance  = $params['distance'];
+            $this->view->projet = $projet;
+            $this->view->total     = $total;
+            $this->view->page      = $page;
+            $this->view->nbPages   = $nbPages;
+            $this->view->message   = "Résultats récupérés avec succès : " . $total . " entreprises.";
+
+            error_log("[BonneBoiteController] Nombre de résultats : " . count($entreprises));
+        } catch (Exception $e) {
+            $this->view->resultats = [];
+            $this->view->citycode  = $params['citycode'];
+            $this->view->rome      = $params['rome'];
+            $this->view->distance  = $params['distance'];
+            $this->view->message   = "Erreur lors de l’appel à Bonne Boite : " . $e->getMessage();
+
+            error_log("[BonneBoiteController] Erreur Bonne Boite : " . $e->getMessage());
+        }
+    }
+
     public function indexAction()
     {
+
+
         // ============================
         // 1. Projets fictifs
         // ============================
@@ -27,7 +144,7 @@ class FranceTravailnewController extends Zend_Controller_Action
         // 2. Paramètres de filtre / pagination
         // ============================
         $page = (int) $this->_getParam('page', 0);
-        $perPage = 50;
+        $perPage = 20;
 
         $params = [
             'motsCles' => $this->_getParam('motsCles', '') ?: null,
@@ -47,19 +164,17 @@ class FranceTravailnewController extends Zend_Controller_Action
             }
         }
 
+
         // ============================
         // 3. Récupération des offres
         // ============================
         $model = new Application_Model_Francetravail();
         try {
+
+
             $result = $model->searchOffres($params);
             $offres = $result['resultats'] ?? [];
             $totalOffres = count($offres); // total réel si l'API le fournit
-
-
-            // $hasNextPage = count($offres) === $perPage;    // Indicateur pour savoir s’il y a une page suivante
-
-            var_dump($totalOffres);
 
             // Référentiels
             $typesContrats      = $model->getReferentiel('typesContrats');
@@ -93,12 +208,14 @@ class FranceTravailnewController extends Zend_Controller_Action
                     }
                 }
             }
+
+            //pour le partial
+            $dashboardData = $this->getDashboardData();
+            $this->view->dashboardData = $dashboardData;
         } catch (Exception $e) {
             $this->view->error = $e->getMessage();
 
             $filtresDynamiques = [];
-
-            // $hasNextPage = false;  //pagination sans nuéro de page
         }
 
         // ============================
@@ -112,261 +229,28 @@ class FranceTravailnewController extends Zend_Controller_Action
         $this->view->params = $_GET; // <-- Ajouté pour éviter l'erreur array_merge
         $this->view->totalOffres = $totalOffres; // <-- ici le total
 
-        // $this->view->hasNextPage = $hasNextPage;  //pagination sans nuéro de page
-    }
+        //base de données
+        $model = new Application_Model_Offrefrancetravail();
+        $dataRecupee = $model->getAllOffres();
 
-
-    public function enregistreroffreAction()
-    {
-        // ============================
-        // 1. Désactiver le layout et la vue
-        // ============================
-        $this->_helper->layout->disableLayout();
-        $this->_helper->viewRenderer->setNoRender(true);
-
-        // ============================
-        // 2. Récupération des données POST
-        // ============================
-        $data = $this->getRequest()->getPost();
-
-        // Vérification des champs obligatoires
-        if (empty($data['libelle'])) {
-            return $this->_helper->json([
-                'success' => false,
-                'message' => 'Données manquantes'
-            ]);
-        }
-
-        // ============================
-        // 3. Insertion en base
-        // ============================
-        try {
-            $tableFrancetravail = new Zend_Db_Table('offrefrancetravail');
-
-            $insertData = [
-                'module'    => $data['module'] ?? 'inconnu', // 👈 ici
-                'libelle'             => $data['libelle'],
-                'url'               => $data['url'] ?? null,
-                'latitude'  => $data['latitude'] ?? $data['lat'] ?? null,
-                'longitude' => $data['longitude'] ?? $data['lon']  ?? null,
-                'date'              => new Zend_Db_Expr('NOW()')
-            ];
-
-            $tableFrancetravail->insert($insertData);
-
-            // ============================
-            // 4. Réponse JSON succès
-            // ============================
-            return $this->_helper->json([
-                'success' => true,
-                'message' => 'Offre enregistrée avec succès'
-            ]);
-        } catch (Exception $e) {
-            // ============================
-            // 4. Réponse JSON erreur
-            // ============================
-            return $this->_helper->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ]);
-        }
+        $this->view->dataRecupee = $dataRecupee;
     }
 
 
 
-
-
-    public function competenceAction()
-    {
-        $codeRome = $this->_getParam('codeRome', null);
-        $libelle  = $this->_getParam('libelle', null);
-
-        $params = [];
-        if (!empty($codeRome)) {
-            $params['codeRome'] = $codeRome;
-        }
-        if (!empty($libelle)) {
-            $params['libelle'] = $libelle;
-        }
-
-        // Si aucun paramètre, on met un code ROME par défaut (exemple : M1805 = Études et développement informatique)
-        if (empty($params)) {
-            $params['codeRome'] = 'M1805';
-        }
-
-        $francetravail = new Application_Model_Francetravail();
-        $listeCompetences = $francetravail->searchCompetence($params);
-
-        $this->view->competences = $listeCompetences;
-    }
-
-    public function fichemetierAction()
-    {
-        $params = [
-            'champs' => 'code,groupescompetencesmobilisees(competences(libelle,code),enjeu(libelle,code)),groupessavoirs(savoirs(libelle,code),categoriesavoirs(libelle,code)),metier(libelle,code)'
-        ];
-
-        $francetravail = new Application_Model_Francetravail();
-
-        try {
-            $ficheMetier = $francetravail->ficheMetier($params);
-            // echo '<pre>';
-            // print_r($ficheMetier);
-            // echo '</pre>';
-            // exit;
-
-            $this->view->ficheMetier = $ficheMetier;
-            $this->view->error = null;
-        } catch (Exception $e) {
-            $this->view->ficheMetier = [];
-            $this->view->error = $e->getMessage();
-        }
-    }
-
-    public function ficheAction()
-    {
-        $model = new Application_Model_Francetravail();
-
-        $page = (int) $this->_getParam('page', 0);
-        $perPage = 10;
-        $motsCles = $this->_getParam('motsCles', '');
-        $departement = $this->_getParam('departement', '');
-
-        error_log("[FranceTravailController] Paramètres reçus : page=$page, motsCles=$motsCles, departement=$departement");
-
-        $params = [
-            'motsCles'    => $motsCles,
-            'departement' => $departement,
-            'page'        => $page,
-            'perPage'     => $perPage
-        ];
-
-        try {
-            $result = $model->searchOffres($params);
-            error_log("[FranceTravailController] Nombre d'offres reçues : " . print_r($result['resultats']));
-        } catch (Exception $e) {
-            $this->view->error = $e->getMessage();
-            error_log("[FranceTravailController] Erreur lors de la récupération des resultats : " . $e->getMessage());
-            $result = ['resultats' => []];
-        }
-
-        $this->view->offres   = $result['resultats'] ?? [];
-        $this->view->page     = $page;
-        $this->view->perPage  = $perPage;
-        $this->view->params   = $params;
-
-        error_log("[FranceTravailController] Fin indexAction, affichage des offres");
-
-
-        // Indiquer explicitement d’utiliser fiche/test.phtml
-        $this->renderScript('francetravailnew/fiche/test.phtml');
-    }
-
-    /**
-     * Formulaire simple pour tester un code ROME
-     * URL : /francetravail/testsoftskills
-     */
-    public function testsoftskillsAction()
-    {
-        $this->_helper->layout->disableLayout();
-
-        $codeRome = $this->_getParam('code');
-        $this->view->codeRome = $codeRome;
-
-        if ($codeRome) {
-            try {
-                $model = new Application_Model_Francetravail();
-                $softSkills = $model->fetchSoftSkillsByRome($codeRome);
-                var_dump($softSkills);
-                $this->view->softSkills = $softSkills;
-            } catch (Exception $e) {
-                $this->view->error = $e->getMessage();
-            }
-        }
-    }
-
-    public function widgetAction()
-    {
-        $model = new Application_Model_Francetravail();
-        $token = $model->getTokenWidget();
-        $this->view->francetravailToken = $token;
-    }
-
-    public function entrepriserecrutementAction()
-    {
-
-        $projet = [
-            "Projet 1" => ["coderome" => 'M1855', "codeInsee" => 75056],
-            "Projet 2" => ["coderome" => 'A1203', "codeInsee" => 13055],
-            "Projet 3" => ["coderome" => 'M1830', "codeInsee" => 92032],
-        ];
-
-
-        $params = [
-            // 'citycode' => $this->_getParam('citycode'),
-            // 'rome'     => $this->_getParam('rome'),
-            'citycode' => $this->_getParam('citycode', $projet['Projet 2']['codeInsee']),
-            'rome'     => $this->_getParam('rome', $projet['Projet 2']['coderome']),
-            // 'rome'     => $this->_getParam('rome'),
-
-            'distance' => $this->_getParam('distance', 10)
-        ];
-
-        $annuaire = new Application_Model_Annuaire();
-        $model    = new Application_Model_Francetravail();
-
-
-
-        try {
-            $resultats = $model->getLaBonneBoite($params);
-            $items     = $resultats['items'] ?? [];
-
-            // Enrichissement de toutes les entreprises avec l'adresse du siège
-            foreach ($items as $entreprise) {
-                if (!empty($entreprise['siret'])) {
-                    $infos = $annuaire->getInfosEntreprise($entreprise['siret']);
-                    if (!empty($infos['siege']['geo_adresse'])) {
-                        $items['adresse_complete'] = $infos['siege']['geo_adresse'];
-                    }
-                }
-            }
-
-            // Passage à la vue
-            // $this->view->adresse = $lacalisation;
-            $this->view->items     = $items;
-            $this->view->projet     = $projet;
-            $this->view->resultats = $resultats;
-            $this->view->citycode  = $params['citycode'];
-            $this->view->rome      = $params['rome'];
-            $this->view->distance  = $params['distance'];
-            $this->view->message   = "Résultats Bonne Boite récupérés avec succès.";
-        } catch (Exception $e) {
-            $this->view->items     = [];
-            $this->view->resultats = [];
-            $this->view->citycode  = $params['citycode'];
-            $this->view->rome      = $params['rome'];
-            $this->view->distance  = $params['distance'];
-            $this->view->message   = "Erreur lors de l’appel à Bonne Boite : " . $e->getMessage();
-        }
-    }
-
-
-
-
-
-    /**
-     * Liste / recherche des services
-     */
     /** Liste et recherche de services */
-    public function servicesAction()
+    public function serviceaccompagnementAction()
     {
 
 
+        //    $modelfrancetravalCommune = new Application_Model_Offrefrancetravail();
+        // $insee = $modelfrancetravalCommune->getCommune();
+        // $codeCommune = $this->_getParam('code_commune', $insee);
 
-        $modelfrancetravalCommune = new Application_Model_Offrefrancetravail();
-        $insee = $modelfrancetravalCommune->getCommune();
+        $nomCommune = $this->_getParam('commune', null); // champ que l'utilisateur remplit
+        $codeCommune = null;
 
-        $codeCommune = $this->_getParam('code_commune', $insee);
+
         $theme       = $this->_getParam('theme', null);
         $type        = $this->_getParam('type', null);
         $source      = $this->_getParam('source', null);
@@ -377,12 +261,6 @@ class FranceTravailnewController extends Zend_Controller_Action
         $typeValue = $this->_getParam('typeValue');
 
         $model = new Application_Model_Datainclusion();
-
-
-        // recuperation de la liste des thématiques
-        // $a = $model->getRefThematique();
-        // var_dump($a);
-        // exit;
 
         $themesRecuperer   = $model->getRefThematique();
 
@@ -397,9 +275,6 @@ class FranceTravailnewController extends Zend_Controller_Action
                 $allTypes[$t['label']] = $t['label'];
             }
         }
-        $this->view->allTypes = $allTypes;
-        $this->view->type = $type; // la valeur envoyée par le form (GET 'type')
-
 
         $sourcesData = $model->getSources();
         $sourcesRecuperer = [];
@@ -408,21 +283,6 @@ class FranceTravailnewController extends Zend_Controller_Action
             // valeur = nom (affichée dans le select)
             $sourcesRecuperer[$s['slug']] = $s['nom'];
         }
-
-        // var_dump($sourceRecuperer);
-        // exit;
-
-
-
-        // $b = [];
-        // foreach ($a as $label) {
-        //     $b[] = $label['label'];
-        // }
-
-
-        $typeService = $model->getTypeServices();
-        // var_dump($typeService);
-        // exit;
 
         try {
             // --- Recherche sans filtre pour récupérer toutes les thématiques/types/structures ---
@@ -520,9 +380,6 @@ class FranceTravailnewController extends Zend_Controller_Action
 
                 ];
 
-                // var_dump($services);
-                // exit;
-
                 // Structures liées aux services filtrés
                 if (!empty($s['structure'])) {
                     $struct = $s['structure'];
@@ -540,16 +397,18 @@ class FranceTravailnewController extends Zend_Controller_Action
                 }
             }
 
-            // $getserviceAdresse= $model->getServices();
-            //  var_dump($resp);
-            // exit;
-
             // --- Passage à la vue ---
+
+            //pour le partial
+            $dashboardData = $this->getDashboardData();
+            $this->view->dashboardData = $dashboardData;
+
             $this->view->thematique = $themesRecuperer;
             $this->view->typeValue = $typeValue;
             $this->view->allTypes = $allTypes;
             $this->view->sourcesList = $sourcesRecuperer;
 
+            $this->view->communeName = $nomCommune;
             $this->view->codeCommune = $codeCommune;
 
             $this->view->services    = $services;
@@ -564,16 +423,14 @@ class FranceTravailnewController extends Zend_Controller_Action
             $this->view->themes      = $themes;
             $this->view->types       = $types;
             $this->view->sources     = $sources;
-            $this->view->params = $_GET; // <-- Ajouté pour éviter l'erreur array_merge
+            $this->view->params = $_GET;
         } catch (Exception $e) {
             $this->view->error = $e->getMessage();
         }
     }
 
-
     public function marchetravaillocalAction()
     {
-
 
 
         // ============================
@@ -587,22 +444,18 @@ class FranceTravailnewController extends Zend_Controller_Action
             "Projet 5" => ["coderome" => 'C1503', "departement" => 13]
         ];
 
-
-
         $periode = [
             "ANNEE",
             "TRIMESTRE"
         ];
 
-
-        $territoireCode = $this->_getParam('territoireCode', 'Inscrire une code de territoire');
-        $codeRome = $this->_getParam('codeRome', 'Inscrire un code rome');
+        $territoireCode = $this->_getParam('territoireCode', $projet['Projet 1']['departement']);
+        $codeRome = $this->_getParam('codeRome', $projet['Projet 1']['coderome']);
         $periodeRecherchee = $this->_getParam('periodeRecherchee', 'TRIMESTRE');
         if (!in_array($periodeRecherchee, $periode)) {
             $periodeRecherchee = 'TRIMESTRE';
         }
         $model = new Application_Model_Francetravail();
-
 
 
         try {
@@ -642,15 +495,15 @@ class FranceTravailnewController extends Zend_Controller_Action
                     'periodeLib'    => $v['libPeriode'] ?? '-',
                     'datMaj'        => $v['datMaj'] ?? null,
                     'territoire'    => $v['libTerritoire'] ?? '-',
-                    'departement'   => $v['codeTerritoire'] ?? '-',
+                    'departement' => $v['codeTerritoire'],
                     'activite'      => $v['libActivite'] ?? 'Marché global',
+                    'valeur' => $v['valeurPrincipaleNom'],
                     'interpretation' => $dynamiqueInterpr['texte'],
                     'badge'         => $dynamiqueInterpr['badge']
                 ];
             }
 
             $this->view->dynamique = $dynamique;
-
 
             /////////////////////////////////////////////////////////////////////////////////////
 
@@ -672,11 +525,9 @@ class FranceTravailnewController extends Zend_Controller_Action
             // var_dump($demandeurs12DerniersMois);
             // exit;
 
-
             $demandeurDerniersMois = null;
             foreach ($demandeurs12DerniersMois['listeValeursParPeriode'] as $v) {
                 if ($v['codeNomenclature'] === 'CUMUL 12 MOIS') {
-
 
                     $demandeurDerniersMois = [
                         'periodeLib'       => $v['libPeriode'],
@@ -687,15 +538,13 @@ class FranceTravailnewController extends Zend_Controller_Action
                         'categorie'        => $v['libNomenclature'],
                         'nombre'           => $v['valeurPrincipaleNombre'] ?? null,
                         'pourcentage'      => $v['valeurSecondairePourcentage'] ?? null,
-
                         // 'caracteristiques' => $v['listeValeurParCaract'] ?? [],
                     ];
                 }
             }
-            // var_dump($demandeurs12DerniersMois);
+            // var_dump($demandeur12DerniersMois);
             // exit;
             $this->view->demandeur12DerniersMois = $demandeurDerniersMois;
-
 
 
             /////////////////////////////////////////////////////////////////////////////////////
@@ -747,16 +596,8 @@ class FranceTravailnewController extends Zend_Controller_Action
                     ];
                 }
             }
-            // var_dump($dernier);
-            // exit;
+
             $this->view->dernierDemandeurs = $dernier;
-
-
-
-            // var_dump($demandeursData[0]);
-            // exit;
-
-
 
             // --- Embauches ---
             $paramsEmbauches = [
@@ -770,7 +611,6 @@ class FranceTravailnewController extends Zend_Controller_Action
             ];
 
             $emb = $model->getEmbauches($paramsEmbauches);
-
 
             $embauchesData = null;
             foreach ($emb['listeValeursParPeriode'] as $v) {
@@ -788,7 +628,6 @@ class FranceTravailnewController extends Zend_Controller_Action
                         }
                     }
 
-
                     $embauchesData = [
                         'periodeLib'    => $v['libPeriode'],
                         'datMaj'        => $v['datMaj'],
@@ -804,8 +643,7 @@ class FranceTravailnewController extends Zend_Controller_Action
                     ];
                 }
             }
-            // var_dump($embauchesData);
-            // exit;
+
             $this->view->embauches = $embauchesData;
 
             // --- Offres d'emploi ---
@@ -838,16 +676,9 @@ class FranceTravailnewController extends Zend_Controller_Action
                     ];
                 }
             };
-            // var_dump($offreData);
-            // exit;
+
 
             $this->view->statsOffres = $offreData;
-
-
-            // var_dump($offres['listeValeursParPeriode'][3]);
-            // exit;
-
-
 
             // --- Tension recrutement ---
             $paramsTension = [
@@ -855,24 +686,23 @@ class FranceTravailnewController extends Zend_Controller_Action
                 "codeTerritoire"       => $territoireCode,
                 "codeTypeActivite"     => "ROME",
                 "codeActivite"         => $codeRome,
-                "codeTypePeriode"      => "ANNEE",
-                "codeTypeNomenclature" => "TYPE_TENSION",
+                "codeTypePeriode"      => "ANNEE",             // toujours annuel
+                "codeTypeNomenclature" => "TYPE_TENSION",      // toujours ce libellé
                 "dernierePeriode"      => true,
-                // "sansCaracteristiques" => true
+                "sansCaracteristiques" => true        // pas de caractéristiques
             ];
 
             try {
                 $ten = $model->getTensionRecrutement($paramsTension);
-                // var_dump($ten);
-                // exit;
+
                 // --- Initialisation des indicateurs ---
-                $tensionPrincipale      = null;
-                $intensiteEmbauche      = null;
-                $manqueMainOeuvre       = null;
-                $attractiviteSalariale  = null;
-                $conditionsTravail      = null;
-                $durabiliteEmploi       = null;
-                $inadEquationGeo        = null;
+                $tensionPrincipale       = null;  // Indicateur de tension global
+                $intensiteEmbauche       = null;  // Intensité d’embauche
+                $manqueMainOeuvre        = null;  // Manque de main-d’œuvre
+                $attractiviteSalariale   = null;  // Attractivité salariale
+                $conditionsTravail       = null;  // Conditions de travail
+                $durabiliteEmploi        = null;  // Durabilité de l’emploi
+                $inadEquationGeo         = null;  // Inadéquation géographique
 
                 foreach ($ten['listeValeursParPeriode'] as $v) {
                     $valeur = $v['valeurPrincipaleDecimale'] ?? null;
@@ -948,28 +778,8 @@ class FranceTravailnewController extends Zend_Controller_Action
             }
 
             // salaire median
-            $codeTypeActivite = 'ROME';
-            $codeActivite     = 'M1801';
-
-            $activiteDetail = $model->getActiviteDetail($codeTypeActivite, $codeActivite);
-
-            // echo '<pre>';
-            // print_r($activiteDetail);
-            // echo '</pre>';
-
-
-            $codeTypeTerritoire = 'DEP'; // ou NAT selon besoin
-            $codeTerritoire     = '75';
-            $codeRome           = 'M1855';
-
-            $salaire = $model->getStatsSalaire($codeTypeTerritoire, $codeTerritoire, $codeRome);
-
-            // echo '<pre>';
-            // print_r($salaire);
-            // echo '</pre>';
-            // exit;
-
-            $codeRomeCible = 'M1855'; // code ROME demandé
+            $salaire = $model->getStatsSalaire('DEP', $territoireCode);
+            $codeRomeCible = trim($codeRome); // code ROME demandé
             $salaireStruct = [];
 
             try {
@@ -1001,11 +811,6 @@ class FranceTravailnewController extends Zend_Controller_Action
                     }
                 }
 
-                // echo "<pre>";
-                // print_r($salaire);
-                // echo "</pre>";
-                // exit;
-
                 if (empty($salaireStruct)) {
                     // Aucun résultat pour ce code ROME
                     $this->view->salaireParRome = null;
@@ -1021,11 +826,9 @@ class FranceTravailnewController extends Zend_Controller_Action
                     $this->view->salaireError = "Erreur API : " . $e->getMessage();
                 }
             }
-
-
-
-
-
+            //pour le partial
+            $dashboardData = $this->getDashboardData();
+            $this->view->dashboardData = $dashboardData;
 
             $this->view->codeRome = $codeRome;
             $this->view->territoireCode = $territoireCode;
@@ -1045,8 +848,7 @@ class FranceTravailnewController extends Zend_Controller_Action
         }
 
         $valeurs = $data['listeValeursParPeriode'][0];
-        // var_dump($valeurs);
-        // exit;
+
         $valeur = (int)($valeurs['valeurPrincipaleNom'] ?? 0);
 
         switch ($valeur) {
@@ -1096,7 +898,6 @@ class FranceTravailnewController extends Zend_Controller_Action
                 return ['texte' => "Indicateur non défini", 'badge' => "secondary"];
         }
     }
-
 
 
 
@@ -1154,55 +955,112 @@ class FranceTravailnewController extends Zend_Controller_Action
         }
     }
 
-
-    public function iastatsAction()
+    public function enregistreroffreAction()
     {
-        $paramsDynamique = [
-            "codeTypeTerritoire" => "DEP",
-            "codeTerritoire"     => '75',
-            "codeTypeActivite"   => "MOYENNE",   // global sur le territoire
-            "codeActivite"       => "MOYENNE",   // idem
-            "codeTypePeriode"    => 'TRIMESTRE', //trimestre obligatoire
-            "dernierePeriode"    => true
-        ];
+        $this->_helper->layout->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
 
-        $model = new Application_Model_Francetravail();
-        $dynIa = $model->getDynamiqueEmploiIa($paramsDynamique);
+        $data = $this->getRequest()->getPost();
 
-        var_dump($dynIa);
+        if (empty($data['libelle'])) {
+            return $this->_helper->json([
+                'success' => false,
+                'message' => 'Données manquantes'
+            ]);
+        }
 
-        $this->view->dynIa = $dynIa;
+        try {
+            $tableFrancetravail = new Zend_Db_Table('francetravail');
+
+            $insertData = [
+                'module' => $data['module'] ?? 'inconnu',
+                'identifiant_offre' => $data['identifiant_offre'] ?? null,
+                'libelle' => $data['libelle'],
+                'url' => $data['url'] ?? null,
+                'latitude' => $data['latitude'] ?? $data['lat'] ?? null,
+                'longitude' => $data['longitude'] ?? $data['lon'] ?? null,
+                'date_enregistrement_bdd' => new Zend_Db_Expr('NOW()'),
+                'dateApi' => !empty($data['dateActualisation'])
+                    ? date('Y-m-d H:i:s', strtotime($data['dateActualisation']))
+                    : (!empty($data['dateCreation'])
+                        ? date('Y-m-d H:i:s', strtotime($data['dateCreation']))
+                        : null),
+                'projet' => $data['projet'] ?? null,
+                'identifiant_offre' => $data['identifiant_offre'] ?? null,
+
+            ];
+
+            $tableFrancetravail->insert($insertData);
+
+            return $this->_helper->json(['success' => true]);
+        } catch (Exception $e) {
+            return $this->_helper->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
-    public function dashboardAction()
-    {
-        $model = new Application_Model_Offrefrancetravail();
-        $offres = $model->getAll();
 
+    // //POUR LES TOTAUX GENERAUX DES PROJETS
+    // public function tableaudebordAction()
+    // {
+    //     // Récupération des données via la méthode privée
+    //     $dashboardData = $this->getDashboardData();
 
-        $this->view->offres = $offres;
-    }
+    //     // Assignation des variables à la vue
+    //     foreach ($dashboardData as $key => $value) {
+    //         $this->view->$key = $value;
+    //     }
+    // }
+
+    // private function getDashboardData()
+    // {
+    //     $model = new Application_Model_Offrefrancetravail();
+
+    //     return [
+    //         'offresData' => $model->getAllOffres(),
+    //         'metiersData' => $model->getAllMetiers(),
+    //         'servicesData' => $model->getAllServices(),
+    //         'entreprisesData' => $model->getAllEntreprises(),
+    //         'totalOffreData' => $model->totalOffres(),
+    //         'totalServicesData' => $model->totalServices(),
+    //         'totalMetiersData' => $model->totalMetiers(),
+    //         'totalEntreprisesData' => $model->totalEntreprises(),
+    //     ];
+    // }
 
     public function tableaudebordAction()
     {
+        // 1. Récupérer le projet sélectionné depuis l'URL (default = Projet 1)
+        $projet = $this->_getParam('projet', 'Projet 1');
+
+        // 2. Récupérer les données du dashboard pour ce projet
+        $dashboardData = $this->getDashboardData($projet);
+
+        foreach ($dashboardData as $key => $value) {
+            $this->view->$key = $value;
+        }
+
+        $this->view->currentProjet = $projet; // utile pour afficher le projet courant
+    }
+
+
+
+    private function getDashboardData($projet)
+    {
         $model = new Application_Model_Offrefrancetravail();
-        $offres = $model->getAll();  //recuperation des offres
-        $metiers = $model->getAllMetiers();  //recuperation des metiers
-        $services = $model->getAllServices();  //recuperation des services
-        $entreprises = $model->getAllEntreprises();  //recuperation des entreprise
 
-        $totalOffre = $model->totalOffres(); //recuperation du total des offres
-        $totalServices = $model->totalServices(); //recuperation du total des services
-        $totalMetiers = $model->totalMetiers(); //recuperation du total des services
+        return [
+            'offresData' => $model->getAllOffresByProjetByModule($projet, 'offres'),
+            'metiersData' => $model->getAllOffresByProjetByModule($projet, 'fiches'),
+            'servicesData' => $model->getAllOffresByProjetByModule($projet, 'services'),
+            'entreprisesData' => $model->getAllOffresByProjetByModule($projet, 'entreprisereccrutement'),
 
-
-        $this->view->totalOffre = $totalOffre;
-        $this->view->totalServices = $totalServices;
-        $this->view->totalMetiers = $totalMetiers;
-
-        $this->view->metiers = $metiers;
-        $this->view->entreprises = $entreprises;
-        $this->view->services = $services;
-        $this->view->offres = $offres;
+            'totalOffreData' => $model->totalModulebyProjet($projet, 'offres'),
+            'totalServicesData' => $model->totalModulebyProjet($projet, 'services'),
+            'totalMetiersData' => $model->totalModulebyProjet($projet, 'fiches'),
+            'totalEntreprisesData' => $model->totalModulebyProjet($projet, 'entreprisereccrutement'),
+        ];
     }
 }

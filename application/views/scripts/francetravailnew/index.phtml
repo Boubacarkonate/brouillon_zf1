@@ -66,12 +66,17 @@
     }
 </style>
 
-<div>
-    <?= $this->partial('francetravailnew/partials/dashboard.phtml', [
-        'recuperationData' => $this->dataRecupee
-    ]) ?>
-    <!-- <?php var_dump($this->dataRecupee) ?> -->
-</div>
+<!-- Bouton offcanvas -->
+
+<button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#staticBackdrop">
+    Tableau de bord
+</button>
+
+
+
+
+
+
 <!-- Filtres modernisés qui tiennent sur une ligne-->
 <div class="card shadow-sm mb-4 border-0">
 
@@ -83,11 +88,12 @@
                 <select id="selectProjet" class="form-select shadow-sm">
                     <option value="">-- Choisir un projet --</option>
                     <?php foreach ($this->projet as $nom => $data): ?>
-                        <option value="<?= htmlspecialchars(json_encode($data)) ?>">
+                        <option value="<?= htmlspecialchars(json_encode(array_merge($data, ['nomProjet' => $nom]))) ?>">
                             <?= $this->escape($nom) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
+
             </div>
 
             <div style="min-width:220px;">
@@ -100,7 +106,7 @@
             </div>
 
             <div style="min-width:180px;">
-                <label class="form-label text-muted">Commune</label>
+                <label class="form-label text-muted">Code Insee</label>
                 <div class="input-group shadow-sm">
                     <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
                     <input type="text" name="commune" id="commune" class="form-control border-start-0"
@@ -121,7 +127,7 @@
                 <div style="min-width:180px;">
                     <label class="form-label text-muted"><?= ucfirst($this->escape($filtreNom)) ?></label>
                     <select name="<?= $this->escape($filtreNom) ?>" class="form-select shadow-sm">
-                        <option value="">Tous <?= $this->escape($filtreNom) ?></option>
+                        <option value="">Tous</option>
                         <?php foreach ($valeurs as $code => $libelle): ?>
                             <option value="<?= $this->escape($code) ?>"
                                 <?= ($this->escape($this->params[$filtreNom] ?? '') === $code) ? 'selected' : '' ?>>
@@ -140,7 +146,6 @@
         </form>
     </div>
 </div>
-
 
 
 
@@ -227,7 +232,6 @@
                                 </div>
 
 
-
                                 <!-- Badges infos -->
                                 <div class="d-flex flex-wrap gap-2 mt-2">
                                     <span
@@ -244,9 +248,10 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm btn-enregistrer"
                                     title="Enregistrer l'offre" data-libelle="<?= htmlspecialchars($offre['intitule'] ?? '') ?>"
                                     data-url="<?= htmlspecialchars($offre['origineOffre']['urlOrigine'] ?? '') ?>"
-                                    data-module="offres">
-                                    <!-- 👈 module ajouté -->
-                                    >
+                                    data-dateactualisation="<?= htmlspecialchars($offre['dateActualisation'] ?? '') ?>"
+                                    data-lat="<?= htmlspecialchars($offre['lieuTravail']['latitude'] ?? '') ?>"
+                                    data-lon="<?= htmlspecialchars($offre['lieuTravail']['longitude'] ?? '') ?>"
+                                    data-identifiant_offre="<?= htmlspecialchars($offre['id'] ?? '') ?>" data-module="offres">
                                     <i class="fa-solid fa-floppy-disk"></i>
                                 </button>
 
@@ -329,16 +334,36 @@
     </div>
 </div>
 
-
 <script>
     const offresData = <?= json_encode($this->offres ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
-    const K = <?= json_encode($this->K) ?>;
+    // const K = <?= json_encode($this->K) ?>;
     document.addEventListener("DOMContentLoaded", function() {
+        // const filtreForm = document.querySelector('form'); // ou un sélecteur plus précis si besoin
 
-        console.log(K);
+        // filtreForm.addEventListener('submit', function(e) {
+        //     e.preventDefault(); // ⚡ Empêche le rechargement de la page
+
+        //     // Récupérer les valeurs des filtres
+        //     const projetSelect = document.getElementById('selectProjet').value;
+        //     const motsCles = document.getElementById('motsCles').value;
+        //     const commune = document.getElementById('commune').value;
+        //     const distance = filtreForm.querySelector('input[name="distance"]').value;
+
+        //     // Construire un objet avec les filtres (tu peux l'envoyer en AJAX)
+        //     const filtres = {
+        //         projet: projetSelect,
+        //         motsCles: motsCles,
+        //         commune: commune,
+        //         distance: distance
+        //     };
+
+        //     console.log('Filtres soumis :', filtres);
+
+        // });
+
+        // console.log(K);
 
         console.log('nombre offres reçus : ', offresData);
-
 
         const map = L.map("map").setView([46.5, 2.5], 6);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -409,7 +434,6 @@
             });
         });
 
-
         // Projet → remplir automatiquement les champs
         const selectProjet = document.getElementById('selectProjet');
         if (selectProjet) {
@@ -417,6 +441,8 @@
                 if (this.value) {
                     try {
                         const data = JSON.parse(this.value);
+                        console.log(data);
+
                         if (data.metier) {
                             document.getElementById('motsCles').value = data.metier;
                         }
@@ -429,6 +455,8 @@
                 }
             });
         }
+
+
 
 
 
@@ -466,42 +494,53 @@
             bg.style.display = 'none';
         });
 
-
     });
 
-    $(document).ready(function() {
-        $(document).on('click', '.btn-enregistrer', function() {
-            const btn = $(this);
+    $(document).on('click', '.btn-enregistrer', function() {
+        const btn = $(this);
 
-            const offre = {
-                libelle: btn.data('libelle'),
-                url: btn.data('url'),
-                latitude: btn.data('lat'),
-                longitude: btn.data('lon'),
-                module: btn.data('module')
+        // Récupérer le projet sélectionné dans le select
+        let projetNom = '';
+        const projetSelect = $('#selectProjet').val();
+        if (projetSelect) {
+            try {
+                const data = JSON.parse(projetSelect);
+                projetNom = data.nomProjet || '';
+                console.log("Projet sélectionné :", projetNom);
+            } catch (e) {
+                console.error("Erreur JSON projet :", e);
+            }
+        }
 
-            };
-            console.log(offre);
+        const offre = {
+            libelle: btn.data('libelle'),
+            projet: projetNom,
+            identifiant_offre: btn.data('identifiant_offre'),
+            dateActualisation: btn.data('dateactualisation'),
+            url: btn.data('url'),
+            longitude: btn.data('lon'),
+            latitude: btn.data('lat'),
+            module: btn.data('module')
+        };
 
+        console.log('Données à enregistrer :', offre);
 
-            $.ajax({
-                url: '/zf1/public/francetravailnew/enregistreroffre',
-                method: 'POST',
-                dataType: 'json',
-                data: offre,
-                success: function(res) {
-                    if (res.success) {
-                        alert("✅ Offre enregistrée !");
-                    } else {
-                        alert("❌ Erreur : " + (res.message ||
-                            "Impossible d'enregistrer l'offre"));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error("Erreur AJAX :", status, error, xhr.responseText);
-                    alert("⚠️ Erreur réseau (" + status + ")");
+        $.ajax({
+            url: '/zf1/public/francetravailnew/enregistreroffre',
+            method: 'POST',
+            dataType: 'json',
+            data: offre,
+            success: function(res) {
+                if (res.success) {
+                    alert("✅ Offre enregistrée !");
+                } else {
+                    alert("❌ Erreur : " + (res.message || "Impossible d'enregistrer l'offre"));
                 }
-            });
+            },
+            error: function(xhr, status, error) {
+                console.error("Erreur AJAX :", status, error, xhr.responseText);
+                alert("⚠️ Erreur réseau (" + status + ")");
+            }
         });
     });
 </script>
