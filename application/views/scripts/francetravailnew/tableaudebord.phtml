@@ -1,8 +1,8 @@
 <div class="container-fluid py-3">
 
-    <!-- ===== Indicateurs ===== -->
+    <!-- ===== Boutons indicateurs ===== -->
     <div class="row g-3 mb-4">
-        <button class="col-md-3 btn btn-primary">
+        <button class="col-md-3 btn btn-primary btn-filter" data-type="offres">
             <div class="card shadow-sm border-0 p-3 text-center">
                 <div class="d-flex align-items-center justify-content-center mb-1">
                     <iconify-icon icon="mdi:file-document-outline" width="18" height="18" class="me-2"></iconify-icon>
@@ -12,7 +12,7 @@
             </div>
         </button>
 
-        <button class="col-md-3 btn btn-primary">
+        <button class="col-md-3 btn btn-primary btn-filter" data-type="metiers">
             <div class="card shadow-sm border-0 p-3 text-center">
                 <div class="d-flex align-items-center justify-content-center mb-1">
                     <iconify-icon icon="mdi:cog-outline" width="18" height="18" class="me-2"></iconify-icon>
@@ -22,7 +22,7 @@
             </div>
         </button>
 
-        <button class="col-md-3 btn btn-primary">
+        <button class="col-md-3 btn btn-primary btn-filter" data-type="services">
             <div class="card shadow-sm border-0 p-3 text-center">
                 <div class="d-flex align-items-center justify-content-center mb-1">
                     <iconify-icon icon="mdi:handshake-outline" width="18" height="18" class="me-2"></iconify-icon>
@@ -32,7 +32,7 @@
             </div>
         </button>
 
-        <button class="col-md-3 btn btn-primary">
+        <button class="col-md-3 btn btn-primary btn-filter" data-type="entreprises">
             <div class="card shadow-sm border-0 p-3 text-center">
                 <div class="d-flex align-items-center justify-content-center mb-1">
                     <iconify-icon icon="mdi:domain" width="18" height="18" class="me-2"></iconify-icon>
@@ -44,153 +44,10 @@
     </div>
 
     <div class="row">
-        <!-- ===== COL GAUCHE : ONGLET ===== -->
+        <!-- ===== COL GAUCHE : affichage dynamique ===== -->
         <div class="col-md-4">
-            <ul class="nav nav-tabs nav-fill" id="masterTabs" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab"
-                        data-bs-target="#tab-offres">Offres</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
-                        data-bs-target="#tab-competences">Métiers</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
-                        data-bs-target="#tab-entreprises">Entreprises</button></li>
-                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
-                        data-bs-target="#tab-services">Services</button></li>
-            </ul>
-
-            <div class="tab-content mt-3">
-                <!-- Onglet Offres -->
-                <div class="tab-pane fade show active" id="tab-offres">
-                    <?php if (!empty($this->offresData)): ?>
-                        <div class="list-group list-group-flush" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->offresData as $idx => $offre): ?>
-                                <?php $hasCoords = !empty($offre['latitude']) && !empty($offre['longitude']); ?>
-                                <div class="list-group-item border-0 border-bottom">
-                                    <strong><?= $this->escape($offre['libelle']) ?></strong><br>
-                                    <small class="text-muted">
-                                        Actualisée le <?= date('d/m/Y', strtotime($this->escape($offre['dateApi']))) ?>
-                                    </small>
-                                    <div class="mt-1 d-flex align-items-center gap-2">
-                                        <a href="<?= $this->escape($offre['url']) ?>" target="_blank"
-                                            title="Voir l'offre originale"
-                                            class="btn btn-outline-secondary btn-sm d-flex flex-column align-items-center justify-content-center"
-                                            style="min-width:50px; line-height:1.1;">
-                                            <span class="small">France</span>
-                                            <span class="small">Travail</span>
-                                        </a>
-                                        <?php if ($hasCoords): ?>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm btn-voir-carte"
-                                                title="Voir sur la carte" data-type="offres" data-idx="<?= $idx ?>"
-                                                data-lat="<?= $this->escape($offre['latitude']) ?>"
-                                                data-lon="<?= $this->escape($offre['longitude']) ?>"
-                                                data-libelle="<?= $this->escape($offre['libelle']) ?>">
-                                                <i class="fa-solid fa-location-dot"></i>
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm disabled"
-                                                title="Aucune localisation">
-                                                <i class="fa-solid fa-location-slash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-muted">Aucune offre disponible.</div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Onglet Entreprises -->
-                <div class="tab-pane fade" id="tab-entreprises">
-                    <?php if (!empty($this->entreprisesData)): ?>
-                        <div class="list-group list-group-flush" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->entreprisesData as $idx => $entreprise): ?>
-                                <?php $hasCoords = !empty($entreprise['latitude']) && !empty($entreprise['longitude']); ?>
-                                <div class="list-group-item border-0 border-bottom">
-                                    <strong><?= $this->escape($entreprise['libelle']) ?></strong><br>
-                                    <div class="mt-1 d-flex align-items-center gap-2">
-                                        <?php if (!empty($entreprise['url'])): ?>
-                                            <a href="<?= $this->escape($entreprise['url']) ?>" target="_blank"
-                                                class="text-primary">Voir l'entreprise</a>
-                                        <?php endif; ?>
-
-                                        <?php if ($hasCoords): ?>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm btn-voir-carte"
-                                                title="Voir sur la carte" data-type="entreprises" data-idx="<?= $idx ?>"
-                                                data-lat="<?= $this->escape($entreprise['latitude']) ?>"
-                                                data-lon="<?= $this->escape($entreprise['longitude']) ?>"
-                                                data-libelle="<?= $this->escape($entreprise['libelle']) ?>">
-                                                <i class="fa-solid fa-location-dot"></i>
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm disabled"
-                                                title="Aucune localisation">
-                                                <i class="fa-solid fa-location-slash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-muted">Aucune entreprise disponible.</div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Onglet Compétences -->
-                <div class="tab-pane fade" id="tab-competences">
-                    <?php if (!empty($this->metiersData)): ?>
-                        <div class="list-group list-group-flush" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->metiersData as $fiche): ?>
-                                <div class="list-group-item border-0 border-bottom">
-                                    <strong><?= $this->escape($fiche['libelle']) ?></strong><br>
-                                    <a href="<?= $this->escape($fiche['url']) ?>" target="_blank" class="text-primary">Voir la
-                                        fiche</a>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-muted">Aucune compétence détectée.</div>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Onglet Services -->
-                <div class="tab-pane fade" id="tab-services">
-                    <?php if (!empty($this->servicesData)): ?>
-                        <div class="list-group list-group-flush" style="max-height: 50vh; overflow-y: auto;">
-                            <?php foreach ($this->servicesData as $idx => $service): ?>
-                                <?php $hasCoords = !empty($service['latitude']) && !empty($service['longitude']); ?>
-                                <div class="list-group-item border-0 border-bottom">
-                                    <strong><?= $this->escape($service['libelle']) ?></strong><br>
-                                    <div class="mt-1 d-flex align-items-center gap-2">
-                                        <?php if (!empty($service['url'])): ?>
-                                            <a href="<?= $this->escape($service['url']) ?>" target="_blank"
-                                                class="text-primary">Voir le service</a>
-                                        <?php endif; ?>
-
-                                        <?php if ($hasCoords): ?>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm btn-voir-carte"
-                                                title="Voir sur la carte" data-type="services" data-idx="<?= $idx ?>"
-                                                data-lat="<?= $this->escape($service['latitude']) ?>"
-                                                data-lon="<?= $this->escape($service['longitude']) ?>"
-                                                data-libelle="<?= $this->escape($service['libelle']) ?>">
-                                                <i class="fa-solid fa-location-dot"></i>
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-outline-secondary btn-sm disabled"
-                                                title="Aucune localisation">
-                                                <i class="fa-solid fa-location-slash"></i>
-                                            </button>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <div class="text-muted">Aucun service disponible.</div>
-                    <?php endif; ?>
-                </div>
-
+            <div id="left-panel" class="list-group list-group-flush" style="max-height: 70vh; overflow-y: auto;">
+                <div class="text-muted">Cliquez sur un bouton ci-dessus pour voir les données.</div>
             </div>
         </div>
 
@@ -201,7 +58,7 @@
             </div>
         </div>
 
-        <!-- ===== DROITE : ONGLET PROJETS & LIENS ===== -->
+        <!-- ===== DROITE : Projets & Liens ===== -->
         <div class="col-md-4">
             <div class="card shadow-sm border-0 p-3 mb-3">
                 <h5 class="fw-semibold text-secondary mb-3 d-flex align-items-center">
@@ -278,18 +135,49 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 <script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
 
-<!-- ===== Script Leaflet ===== -->
+<!-- ===== Script Filtrage & Leaflet ===== -->
+
 <script>
     document.addEventListener("DOMContentLoaded", () => {
-        const offres = <?= json_encode($this->offresData ?? []) ?>;
-        const entreprises = <?= json_encode($this->entreprisesData ?? []) ?>;
-        const services = <?= json_encode($this->servicesData ?? []) ?>;
+        const data = {
+            offres: <?= json_encode($this->offresData ?? []) ?>,
+            metiers: <?= json_encode($this->metiersData ?? []) ?>,
+            services: <?= json_encode($this->servicesData ?? []) ?>,
+            entreprises: <?= json_encode($this->entreprisesData ?? []) ?>
+        };
 
+        const leftPanel = document.getElementById('left-panel');
+
+        function renderData(type) {
+            leftPanel.innerHTML = '';
+            const items = data[type] || [];
+            if (!items.length) {
+                leftPanel.innerHTML = `<div class="text-muted">Aucune donnée disponible pour ${type}.</div>`;
+                return;
+            }
+            items.forEach((item, idx) => {
+                let coords = item.latitude && item.longitude ?
+                    ` (lat: ${item.latitude}, lon: ${item.longitude})` : '';
+                let url = item.url ? `<a href="${item.url}" target="_blank">Voir</a>` : '';
+                let html = `<div class="list-group-item border-0 border-bottom">
+                            <strong>${item.libelle}</strong><br>${url}${coords}
+                        </div>`;
+                leftPanel.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        document.querySelectorAll('.btn-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.type;
+                renderData(type);
+            });
+        });
+
+        // --- Leaflet map (inchangé) ---
         const map = L.map('master-map').setView([46.8, 2.5], 5);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: '&copy; OpenStreetMap contributors'
@@ -302,12 +190,12 @@
             services: {}
         };
 
-        function addMarkers(data, type) {
-            data.forEach((item, idx) => {
+        function addMarkers(type) {
+            const items = data[type] || [];
+            items.forEach((item, idx) => {
                 const lat = parseFloat(item.latitude);
                 const lon = parseFloat(item.longitude);
                 if (isNaN(lat) || isNaN(lon)) return;
-
                 const popup =
                     `<strong>${item.libelle || 'Sans titre'}</strong><br>${item.url ? `<a href="${item.url}" target="_blank">Voir</a>` : ''}`;
                 const marker = L.marker([lat, lon]).bindPopup(popup);
@@ -316,46 +204,9 @@
             });
         }
 
-        addMarkers(offres, 'offres');
-        addMarkers(entreprises, 'entreprises');
-        addMarkers(services, 'services');
-
+        ['offres', 'entreprises', 'services'].forEach(addMarkers);
         if (markers.getLayers().length) map.fitBounds(markers.getBounds(), {
             padding: [30, 30]
-        });
-
-        document.querySelectorAll('.btn-voir-carte').forEach((btn) => {
-            const type = btn.dataset.type;
-            const idx = btn.dataset.idx;
-            const marker = markerMap[type]?.[idx];
-            if (!marker) return;
-            btn.addEventListener('click', () => {
-                markers.zoomToShowLayer(marker, () => marker.openPopup());
-            });
-        });
-
-        document.querySelectorAll('#masterTabs button').forEach(btn => {
-            btn.addEventListener('shown.bs.tab', e => {
-                const tabId = e.target.dataset.bsTarget.replace('#', '');
-                const tabsMap = {
-                    'tab-offres': 'offres',
-                    'tab-entreprises': 'entreprises',
-                    'tab-services': 'services',
-                    'tab-competences': 'competences'
-                };
-                const group = tabsMap[tabId];
-                const groupMarkers = Object.values(markerMap[group] || {});
-                const mapEl = document.getElementById('master-map');
-
-                if (!groupMarkers.length) mapEl.classList.add('inactive');
-                else {
-                    mapEl.classList.remove('inactive');
-                    const bounds = L.latLngBounds(groupMarkers.map(m => m.getLatLng()));
-                    map.fitBounds(bounds, {
-                        padding: [30, 30]
-                    });
-                }
-            });
         });
     });
 </script>
