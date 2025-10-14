@@ -255,6 +255,14 @@
                                     <i class="fa-solid fa-floppy-disk"></i>
                                 </button>
 
+                                <!-- Bouton Envoyer par mail -->
+                                <?php $url = $this->escape($offre['origineOffre']['urlOrigine'] ?? '#'); ?>
+                                <a href="mailto:destinataire@example.com?subject=Offre: <?= $this->escape($offre['intitule'] ?? '') ?>&body=Voici le lien vers l'offre : <?= $url ?>"
+                                    class="btn btn-outline-secondary btn-sm" title="Envoyer l'offre par email">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </a>
+
+
                                 <!-- Bouton Voir sur la carte -->
                                 <?php $hasCoords = !empty($offre['lieuTravail']['latitude']) && !empty($offre['lieuTravail']['longitude']); ?>
                                 <button type="button"

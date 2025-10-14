@@ -209,7 +209,7 @@ class FranceTravailnewController extends Zend_Controller_Action
                 }
             }
 
-            //pour le partial
+            // //pour le partial
             $dashboardData = $this->getDashboardData();
             $this->view->dashboardData = $dashboardData;
         } catch (Exception $e) {
@@ -1032,10 +1032,10 @@ class FranceTravailnewController extends Zend_Controller_Action
 
     public function tableaudebordAction()
     {
-        // 1. Récupérer le projet sélectionné depuis l'URL (default = Projet 1)
+        // Récupérer le projet sélectionné depuis l'URL (default = Projet 1)
         $projet = $this->_getParam('projet', 'Projet 1');
 
-        // 2. Récupérer les données du dashboard pour ce projet
+        // Dashboard data
         $dashboardData = $this->getDashboardData($projet);
 
         foreach ($dashboardData as $key => $value) {
@@ -1047,10 +1047,26 @@ class FranceTravailnewController extends Zend_Controller_Action
 
 
 
+
     private function getDashboardData($projet)
     {
         $model = new Application_Model_Offrefrancetravail();
 
+        if ($projet === 'sans-projet') {
+            return [
+                'offresData' => $model->getAllOffresSansProjet('offres'),
+                'metiersData' => $model->getAllOffresSansProjet('fiches'),
+                'servicesData' => $model->getAllOffresSansProjet('services'),
+                'entreprisesData' => $model->getAllOffresSansProjet('entreprisereccrutement'),
+
+                'totalOffreData' => $model->totalModuleSansProjet('offres'),
+                'totalServicesData' => $model->totalModuleSansProjet('services'),
+                'totalMetiersData' => $model->totalModuleSansProjet('fiches'),
+                'totalEntreprisesData' => $model->totalModuleSansProjet('entreprisereccrutement'),
+            ];
+        }
+
+        // Projet classique
         return [
             'offresData' => $model->getAllOffresByProjetByModule($projet, 'offres'),
             'metiersData' => $model->getAllOffresByProjetByModule($projet, 'fiches'),
@@ -1062,5 +1078,87 @@ class FranceTravailnewController extends Zend_Controller_Action
             'totalMetiersData' => $model->totalModulebyProjet($projet, 'fiches'),
             'totalEntreprisesData' => $model->totalModulebyProjet($projet, 'entreprisereccrutement'),
         ];
+    }
+
+
+    /**
+     * Requête AJAX : renvoie les données JSON selon le module (offres, métiers, services…)
+     */
+    public function getdataAction()
+    {
+        $this->_helper->layout->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $type = $this->_getParam('type');
+        $projet = $this->_getParam('projet', null);
+
+        $model = new Application_Model_Offrefrancetravail();
+
+        if ($projet === 'sans-projet' || empty($projet)) {
+            // Données sans projet
+            switch ($type) {
+                case 'offres':
+                    $data = $model->getAllOffresSansProjet('offres');
+                    break;
+                case 'metiers':
+                    $data = $model->getAllOffresSansProjet('fiches');
+                    break;
+                case 'services':
+                    $data = $model->getAllOffresSansProjet('services');
+                    break;
+                case 'entreprises':
+                    $data = $model->getAllOffresSansProjet('entreprisereccrutement');
+                    break;
+                default:
+                    $data = [];
+            }
+        } else {
+            // Projet classique
+            switch ($type) {
+                case 'offres':
+                    $data = $model->getAllOffresByProjetByModule($projet, 'offres');
+                    break;
+                case 'metiers':
+                    $data = $model->getAllOffresByProjetByModule($projet, 'fiches');
+                    break;
+                case 'services':
+                    $data = $model->getAllOffresByProjetByModule($projet, 'services');
+                    break;
+                case 'entreprises':
+                    $data = $model->getAllOffresByProjetByModule($projet, 'entreprisereccrutement');
+                    break;
+                default:
+                    $data = [];
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'data' => $data
+        ]);
+    }
+
+
+    /**
+     * (Optionnel) Requête AJAX pour supprimer toutes les entrées d’un projet
+     */
+    public function deleteitemAction()
+    {
+        $this->_helper->layout->disableLayout();
+        $this->_helper->viewRenderer->setNoRender(true);
+
+        $id = (int) $this->_getParam('id');
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'ID manquant']);
+            return;
+        }
+
+        $model = new Application_Model_Offrefrancetravail();
+        $deleted = $model->deleteItem($id);
+
+        echo json_encode([
+            'success' => (bool)$deleted,
+            'message' => $deleted ? 'Élément supprimé avec succès.' : 'Élément introuvable.'
+        ]);
     }
 }
