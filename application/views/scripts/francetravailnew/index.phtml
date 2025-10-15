@@ -574,50 +574,50 @@
         });
     });
 
-    $(document).on('click', '.btn-select-projet', function() {
-        const projet = $(this).data('projet');
+    // $(document).on('click', '.btn-select-projet', function() {
+    //     const projet = $(this).data('projet');
 
-        $.ajax({
-            url: '/zf1/public/francetravailnew/getdashboarddata',
-            method: 'GET',
-            dataType: 'json',
-            data: {
-                projet: projet
-            },
-            success: function(res) {
-                // Totaux
-                $('.btn-filter[data-type="offres"] h4').text(res.totalOffreData || 0);
-                $('.btn-filter[data-type="metiers"] h4').text(res.totalMetiersData || 0);
-                $('.btn-filter[data-type="services"] h4').text(res.totalServicesData || 0);
-                $('.btn-filter[data-type="entreprises"] h4').text(res.totalEntreprisesData || 0);
+    //     $.ajax({
+    //         url: '/zf1/public/francetravailnew/getdashboarddata',
+    //         method: 'GET',
+    //         dataType: 'json',
+    //         data: {
+    //             projet: projet
+    //         },
+    //         success: function(res) {
+    //             // Totaux
+    //             $('.btn-filter[data-type="offres"] h4').text(res.totalOffreData || 0);
+    //             $('.btn-filter[data-type="metiers"] h4').text(res.totalMetiersData || 0);
+    //             $('.btn-filter[data-type="services"] h4').text(res.totalServicesData || 0);
+    //             $('.btn-filter[data-type="entreprises"] h4').text(res.totalEntreprisesData || 0);
 
-                // Left panel
-                const panel = $('#left-panel');
-                panel.empty();
-                if (!res.offresData.length) {
-                    panel.text('Aucune offre pour ce projet.');
-                } else {
-                    res.offresData.forEach(offre => {
-                        panel.append(`<div>${offre.libelle}</div>`);
-                    });
-                }
+    //             // Left panel
+    //             const panel = $('#left-panel');
+    //             panel.empty();
+    //             if (!res.offresData.length) {
+    //                 panel.text('Aucune offre pour ce projet.');
+    //             } else {
+    //                 res.offresData.forEach(offre => {
+    //                     panel.append(`<div>${offre.libelle}</div>`);
+    //                 });
+    //             }
 
-                // Carte
-                markers.clearLayers();
-                res.offresData.forEach((offre, idx) => {
-                    if (offre.latitude && offre.longitude) {
-                        const marker = L.marker([offre.latitude, offre.longitude], {
-                                icon: markerNormal
-                            })
-                            .bindPopup(`<strong>${offre.libelle}</strong>`);
-                        markers.addLayer(marker);
-                    }
-                });
-                if (markers.getLayers().length) map.fitBounds(markers.getBounds());
-            },
-            error: function(err) {
-                console.error("Erreur AJAX dashboard :", err);
-            }
-        });
-    });
+    //             // Carte
+    //             markers.clearLayers();
+    //             res.offresData.forEach((offre, idx) => {
+    //                 if (offre.latitude && offre.longitude) {
+    //                     const marker = L.marker([offre.latitude, offre.longitude], {
+    //                             icon: markerNormal
+    //                         })
+    //                         .bindPopup(`<strong>${offre.libelle}</strong>`);
+    //                     markers.addLayer(marker);
+    //                 }
+    //             });
+    //             if (markers.getLayers().length) map.fitBounds(markers.getBounds());
+    //         },
+    //         error: function(err) {
+    //             console.error("Erreur AJAX dashboard :", err);
+    //         }
+    //     });
+    // });
 </script>

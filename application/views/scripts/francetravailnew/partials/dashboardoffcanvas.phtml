@@ -1,6 +1,12 @@
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
 <!-- ===== Bouton pour ouvrir le offcanvas ===== -->
-<button class="btn btn-primary my-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasDashboard"
-    aria-controls="offcanvasDashboard">
+<button class="btn btn-secondary btn-sm my-3" type="button" data-bs-toggle="offcanvas"
+    data-bs-target="#offcanvasDashboard" aria-controls="offcanvasDashboard">
     Ouvrir le tableau de bord
 </button>
 
@@ -20,9 +26,9 @@
 
             <!-- ===== Boutons indicateurs ===== -->
             <div class="row g-3 mb-4">
-                <button class="col-12 col-sm-6 col-md-3 btn btn-primary btn-filter" data-type="offres"
+                <button class="col-12 col-sm-6 col-md-3 btn btn-transparent btn-filter" data-type="offres"
                     data-projet="<?= $this->currentProjet ?>">
-                    <div class="card shadow-sm border-0 p-3 text-center">
+                    <div class="card shadow-sm border-2 p-3 text-center">
                         <div class="d-flex align-items-center justify-content-center mb-1">
                             <iconify-icon icon="mdi:file-document-outline" width="18" height="18" class="me-2">
                             </iconify-icon>
@@ -32,9 +38,9 @@
                     </div>
                 </button>
 
-                <button class="col-12 col-sm-6 col-md-3 btn btn-primary btn-filter" data-type="metiers"
+                <button class="col-12 col-sm-6 col-md-3 btn btn-transparent btn-filter" data-type="metiers"
                     data-projet="<?= $this->currentProjet ?>">
-                    <div class="card shadow-sm border-0 p-3 text-center">
+                    <div class="card shadow-sm border-2 p-3 text-center">
                         <div class="d-flex align-items-center justify-content-center mb-1">
                             <iconify-icon icon="mdi:cog-outline" width="18" height="18" class="me-2"></iconify-icon>
                             <span class="text-muted">Métiers détectés</span>
@@ -43,9 +49,9 @@
                     </div>
                 </button>
 
-                <button class="col-12 col-sm-6 col-md-3 btn btn-primary btn-filter" data-type="services"
+                <button class="col-12 col-sm-6 col-md-3 btn btn-transparent btn-filter" data-type="services"
                     data-projet="<?= $this->currentProjet ?>">
-                    <div class="card shadow-sm border-0 p-3 text-center">
+                    <div class="card shadow-sm border-2 p-3 text-center">
                         <div class="d-flex align-items-center justify-content-center mb-1">
                             <iconify-icon icon="mdi:handshake-outline" width="18" height="18" class="me-2">
                             </iconify-icon>
@@ -55,12 +61,12 @@
                     </div>
                 </button>
 
-                <button class="col-12 col-sm-6 col-md-3 btn btn-primary btn-filter" data-type="entreprises"
+                <button class="col-12 col-sm-6 col-md-3 btn btn-transparent btn-filter" data-type="entreprises"
                     data-projet="<?= $this->currentProjet ?>">
-                    <div class="card shadow-sm border-0 p-3 text-center">
+                    <div class="card shadow-sm border-2 p-3 text-center">
                         <div class="d-flex align-items-center justify-content-center mb-1">
                             <iconify-icon icon="mdi:domain" width="18" height="18" class="me-2"></iconify-icon>
-                            <span class="text-muted">Entreprises</span>
+                            <span class="text-muted">Entreprises potentielles</span>
                         </div>
                         <h4 class="fw-bold text-primary mb-0"><?= $this->totalEntreprisesData ?? 0 ?></h4>
                     </div>
@@ -91,27 +97,32 @@
                             <iconify-icon icon="mdi:folder-open" width="20" height="20" class="me-1"></iconify-icon>
                             Projets
                         </h5>
-                        <ul class="list-unstyled mb-0">
-                            <li>
-                                <button type="button"
-                                    class="btn <?= ($this->currentProjet === 'sans-projet') ? 'btn-primary' : 'btn-outline-secondary' ?> mb-1 btn-select-projet"
-                                    data-projet="sans-projet">
-                                    Données sans projet
-                                </button>
-                            </li>
-                            <?php for ($i = 1; $i <= 4; $i++): ?>
-                                <?php $p = "Projet $i"; ?>
+
+                        <!-- Conteneur scrollable -->
+                        <div class="project-list-scroll" style="max-height: 250px; overflow-y: auto;">
+                            <ul class="list-unstyled mb-0">
                                 <li>
                                     <button type="button"
-                                        class="btn <?= ($this->currentProjet === $p) ? 'btn-primary' : 'btn-outline-primary' ?> mb-1 btn-select-projet"
-                                        data-projet="<?= $p ?>">
-                                        <?= $p ?> — <em>Métier - Code ROME</em>
+                                        class="btn <?= ($this->currentProjet === 'sans-projet') ? 'btn-primary' : 'btn-outline-secondary' ?> mb-1 btn-select-projet"
+                                        data-projet="sans-projet">
+                                        Données sans projet
                                     </button>
                                 </li>
-                            <?php endfor; ?>
-                        </ul>
-
+                                <?php for ($i = 1; $i <= 20; $i++): // exemple pour beaucoup de projets 
+                                ?>
+                                    <?php $p = "Projet $i"; ?>
+                                    <li>
+                                        <button type="button"
+                                            class="btn <?= ($this->currentProjet === $p) ? 'btn-primary' : 'btn-outline-primary' ?> mb-1 btn-select-projet"
+                                            data-projet="<?= $p ?>">
+                                            <?= $p ?> — <em>Métier - Code ROME</em>
+                                        </button>
+                                    </li>
+                                <?php endfor; ?>
+                            </ul>
+                        </div>
                     </div>
+
 
                     <div class="card shadow-sm border-0 p-3">
                         <h5 class="fw-semibold text-secondary mb-3 d-flex align-items-center">
@@ -172,19 +183,209 @@
     </div>
 </div>
 
-<!-- ===== Dépendances ===== -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-<script src="https://code.iconify.design/iconify-icon/2.0.0/iconify-icon.min.js"></script>
 
 <!-- Ton script jQuery + Leaflet inchangé -->
+
+
+
 <script>
-    // Ton code JS existant (inchangé)
+    $(document).ready(function() {
+
+        const leftPanel = $('#left-panel');
+        const map = L.map('master-map').setView([46.8, 2.5], 5);
+
+        // --- Configuration de la carte ---
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const markers = L.markerClusterGroup().addTo(map);
+
+        function renderData(items) {
+            console.log("renderData appelé avec", items.length, "éléments");
+
+            leftPanel.empty();
+            markers.clearLayers();
+
+            if (!items.length) {
+                console.log("Aucune donnée à afficher");
+                leftPanel.html('<div class="text-muted">Aucune donnée disponible.</div>');
+                return;
+            }
+
+            $.each(items, function(idx, item) {
+                console.log("Ajout de l'item :", item);
+                const coords = (item.latitude && item.longitude) ?
+                    `(lat: ${item.latitude}, lon: ${item.longitude})` : '';
+                const url = item.url ? `<a href="${item.url}" target="_blank">Voir</a>` : '';
+
+                const html = `
+                <div class="list-group-item border-0 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${item.libelle || 'Sans libellé'}</strong><br>
+                        ${url} ${coords}
+                    </div>
+                    <button class="btn btn-sm btn-outline-danger btn-delete-item" data-id="${item.id}" title="Supprimer">
+                        🗑
+                    </button>
+                </div>
+            `;
+                leftPanel.append(html);
+
+                if (item.latitude && item.longitude) {
+                    const lat = parseFloat(item.latitude);
+                    const lon = parseFloat(item.longitude);
+                    if (!isNaN(lat) && !isNaN(lon)) {
+                        const popup = `<strong>${item.libelle || 'Sans titre'}</strong><br>${url}`;
+                        const marker = L.marker([lat, lon]).bindPopup(popup);
+                        markers.addLayer(marker);
+                    }
+                }
+            });
+
+            if (markers.getLayers().length > 0) {
+                map.fitBounds(markers.getBounds(), {
+                    padding: [30, 30]
+                });
+            }
+        }
+
+        // --- Clic sur les boutons de filtre ---
+        $('.btn-filter').on('click', function() {
+            const type = $(this).data('type');
+            const projet = $(this).data('projet');
+            console.log("Filtre cliqué :", type, "pour le projet :", projet);
+
+            leftPanel.html('<div class="text-muted">Chargement en cours...</div>');
+
+            $.ajax({
+                url: '/zf1/public/francetravailnew/getdata',
+                type: 'GET',
+                dataType: 'json',
+                data: {
+                    type: type,
+                    projet: projet
+                },
+                success: function(response) {
+                    console.log("Réponse AJAX getdata :", response);
+                    if (response.success) {
+                        renderData(response.data);
+                    } else {
+                        console.log("Erreur : données non disponibles");
+                        leftPanel.html(
+                            '<div class="text-danger">Erreur : données non disponibles.</div>'
+                        );
+                    }
+                },
+                error: function(xhr) {
+                    console.error("Erreur AJAX :", xhr.responseText);
+                    leftPanel.html(
+                        '<div class="text-danger">Erreur de communication avec le serveur.</div>'
+                    );
+                }
+            });
+        });
+
+        $(document).on('click', '.btn-select-projet', function() {
+            const projet = $(this).data('projet');
+            console.log("Projet sélectionné :", projet);
+
+            // Mise à jour des boutons filtres
+            $('.btn-filter').each(function() {
+                $(this).data('projet', projet); // nouveau projet selectionné
+            });
+
+            // --- Gestion de la classe active sur les boutons projets ---
+            $('.btn-select-projet').each(function() {
+                if ($(this).data('projet') === projet) {
+                    $(this)
+                        .removeClass('btn-outline-primary btn-outline-secondary')
+                        .addClass('btn-primary');
+                } else {
+                    // Remettre le style par défaut selon le type
+                    if ($(this).data('projet') === 'sans-projet') {
+                        $(this).removeClass('btn-primary').addClass('btn-outline-secondary');
+                    } else {
+                        $(this).removeClass('btn-primary').addClass('btn-outline-primary');
+                    }
+                }
+            });
+
+
+            $.ajax({
+                url: '/zf1/public/francetravailnew/getdashboarddata',
+                method: 'GET',
+                dataType: 'json',
+                data: {
+                    projet: projet
+                },
+                success: function(res) {
+                    console.log("Réponse AJAX dashboard :", res);
+
+                    $('.btn-filter[data-type="offres"] h4').text(res.totalOffreData || 0);
+                    $('.btn-filter[data-type="metiers"] h4').text(res.totalMetiersData || 0);
+                    $('.btn-filter[data-type="services"] h4').text(res.totalServicesData || 0);
+                    $('.btn-filter[data-type="entreprises"] h4').text(res
+                        .totalEntreprisesData || 0);
+
+                    leftPanel.empty();
+                    if (!res.offresData.length) {
+                        console.log("Aucune offre pour ce projet");
+                        leftPanel.text('Aucune offre pour ce projet.');
+                    } else {
+                        leftPanel.text(
+                            'Cliquez sur un bouton ci-dessus pour voir les données.');
+
+                    }
+
+                    markers.clearLayers();
+                    res.offresData.forEach(offre => {
+                        if (offre.latitude && offre.longitude) {
+                            console.log("Ajout marqueur :", offre.libelle, offre
+                                .latitude, offre.longitude);
+                            const marker = L.marker([offre.latitude, offre.longitude])
+                                .bindPopup(`<strong>${offre.libelle}</strong>`);
+                            markers.addLayer(marker);
+                        }
+                    });
+                    if (markers.getLayers().length) map.fitBounds(markers.getBounds());
+                },
+                error: function(err) {
+                    console.error("Erreur AJAX dashboard :", err);
+                }
+            });
+        });
+
+        $(document).on('click', '.btn-delete-item', function() {
+            const id = $(this).data('id');
+            const itemDiv = $(this).closest('.list-group-item');
+            console.log("Suppression de l'item id :", id);
+
+            if (!confirm('Supprimer cet élément ?')) return;
+
+            $.ajax({
+                url: '/zf1/public/francetravailnew/deleteitem',
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    id: id
+                },
+                success: function(res) {
+                    console.log("Résultat suppression :", res);
+                    alert(res.message);
+                    if (res.success) itemDiv.remove();
+                },
+                error: function() {
+                    console.error(
+                        'Erreur de communication avec le serveur pour la suppression');
+                    alert('Erreur de communication avec le serveur.');
+                }
+            });
+        });
+
+    });
 </script>
+
 
 <style>
     .offcanvas {
