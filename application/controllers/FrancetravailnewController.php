@@ -127,18 +127,20 @@ class FranceTravailnewController extends Zend_Controller_Action
 
     public function indexAction()
     {
-
-
         // ============================
         // 1. Projets fictifs
         // ============================
-        $projet = [
+        $projets = [
             "Projet 1" => ["metier" => 'développeur', "codeInsee" => 92050],
             "Projet 2" => ["metier" => 'architecte', "codeInsee" => 79185],
             "Projet 3" => ["metier" => 'infirmier', "codeInsee" => 31003],
             "Projet 4" => ["metier" => 'chef de produit', "codeInsee" => 64005],
             "Projet 5" => ["metier" => 'ingénieur agronome', "codeInsee" => 80008]
         ];
+
+        // ✅ Projet courant (par défaut : Projet 1)
+        $currentProjet = $this->_getParam('projet', 'Projet 1');
+        $this->view->currentProjet = $currentProjet;
 
         // ============================
         // 2. Paramètres de filtre / pagination
@@ -155,7 +157,6 @@ class FranceTravailnewController extends Zend_Controller_Action
             'agregation' => []
         ];
 
-        // Filtres dynamiques
         $dynamicFilters = ['typeContrat', 'natureContrat', 'niveauFormations', 'secteursActivites', 'experience'];
         foreach ($dynamicFilters as $filter) {
             $val = $this->_getParam($filter, null);
@@ -164,25 +165,21 @@ class FranceTravailnewController extends Zend_Controller_Action
             }
         }
 
-
         // ============================
         // 3. Récupération des offres
         // ============================
         $model = new Application_Model_Francetravail();
         try {
-
-
             $result = $model->searchOffres($params);
             $offres = $result['resultats'] ?? [];
-            $totalOffres = count($offres); // total réel si l'API le fournit
+            $totalOffres = count($offres);
 
-            // Référentiels
+            // Référentiels pour filtres dynamiques
             $typesContrats      = $model->getReferentiel('typesContrats');
             $naturesContrats    = $model->getReferentiel('naturesContrats');
             $niveauxFormation   = $model->getReferentiel('niveauxFormations');
             $secteursActivites  = $model->getReferentiel('secteursActivites');
 
-            // Filtres dynamiques
             $allowedFilters = ['typeContrat', 'natureContrat', 'niveauFormations', 'secteursActivites', 'experience'];
             $filtresDynamiques = [];
 
@@ -209,31 +206,36 @@ class FranceTravailnewController extends Zend_Controller_Action
                 }
             }
 
-            // //pour le partial
-            $dashboardData = $this->getDashboardData();
-            $this->view->dashboardData = $dashboardData;
+            // ============================
+            // 4. Récupération du dashboard complet
+            // ============================
+            $dashboardData = $this->getDashboardData($currentProjet);
+
+            // Injecter toutes les données dans la vue pour le partial
+            foreach ($dashboardData as $key => $value) {
+                $this->view->$key = $value;
+            }
+
+            $this->view->currentProjet = $currentProjet;
         } catch (Exception $e) {
             $this->view->error = $e->getMessage();
-
             $filtresDynamiques = [];
         }
 
         // ============================
-        // 4. Envoi des données à la vue
+        // 5. Envoi des données à la vue
         // ============================
-        $this->view->projet = $projet;
+        $this->view->projets = $projets;
         $this->view->offres = $offres;
-        $this->view->page     = $page;
-        $this->view->perPage  = $perPage;
+        $this->view->page = $page;
+        $this->view->perPage = $perPage;
         $this->view->filtresDynamiques = $filtresDynamiques;
-        $this->view->params = $_GET; // <-- Ajouté pour éviter l'erreur array_merge
-        $this->view->totalOffres = $totalOffres; // <-- ici le total
+        $this->view->params = $_GET;
+        $this->view->totalOffres = $totalOffres;
 
-        //base de données
-        $model = new Application_Model_Offrefrancetravail();
-        $dataRecupee = $model->getAllOffres();
-
-        $this->view->dataRecupee = $dataRecupee;
+        // ✅ Le partial peut maintenant récupérer :
+        // currentProjet, offresData, metiersData, servicesData, entreprisesData,
+        // totalOffreData, totalMetiersData, totalServicesData, totalEntreprisesData
     }
 
 
@@ -400,8 +402,8 @@ class FranceTravailnewController extends Zend_Controller_Action
             // --- Passage à la vue ---
 
             //pour le partial
-            $dashboardData = $this->getDashboardData();
-            $this->view->dashboardData = $dashboardData;
+            // $dashboardData = $this->getDashboardData();
+            // $this->view->dashboardData = $dashboardData;
 
             $this->view->thematique = $themesRecuperer;
             $this->view->typeValue = $typeValue;
@@ -1160,5 +1162,17 @@ class FranceTravailnewController extends Zend_Controller_Action
             'success' => (bool)$deleted,
             'message' => $deleted ? 'Élément supprimé avec succès.' : 'Élément introuvable.'
         ]);
+    }
+
+    public function getdashboarddataAction()
+    {
+        $this->_helper->viewRenderer->setNoRender(true);
+        $this->_helper->layout->disableLayout();
+
+        $projet = $this->_getParam('projet', 'Projet 1');
+
+        $data = $this->getDashboardData($projet); // même méthode que dans indexAction
+
+        echo json_encode($data);
     }
 }
