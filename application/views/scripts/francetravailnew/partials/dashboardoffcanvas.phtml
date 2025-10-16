@@ -110,14 +110,14 @@
                                 </li>
                                 <?php for ($i = 1; $i <= 20; $i++): // exemple pour beaucoup de projets 
                                 ?>
-                                    <?php $p = "Projet $i"; ?>
-                                    <li>
-                                        <button type="button"
-                                            class="btn <?= ($this->currentProjet === $p) ? 'btn-primary' : 'btn-outline-primary' ?> mb-1 btn-select-projet"
-                                            data-projet="<?= $p ?>">
-                                            <?= $p ?> — <em>Métier - Code ROME</em>
-                                        </button>
-                                    </li>
+                                <?php $p = "Projet $i"; ?>
+                                <li>
+                                    <button type="button"
+                                        class="btn <?= ($this->currentProjet === $p) ? 'btn-primary' : 'btn-outline-primary' ?> mb-1 btn-select-projet"
+                                        data-projet="<?= $p ?>">
+                                        <?= $p ?> — <em>Métier - Code ROME</em>
+                                    </button>
+                                </li>
                                 <?php endfor; ?>
                             </ul>
                         </div>
@@ -189,225 +189,225 @@
 
 
 <script>
-    $(document).ready(function() {
+$(document).ready(function() {
 
-        const leftPanel = $('#left-panel');
-        const map = L.map('master-map').setView([46.8, 2.5], 5);
+    const leftPanel = $('#left-panel');
+    const map = L.map('master-map').setView([46.8, 2.5], 5);
 
-        // --- Configuration de la carte ---
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
+    // --- Configuration de la carte ---
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
 
-        const markers = L.markerClusterGroup().addTo(map);
+    const markers = L.markerClusterGroup().addTo(map);
 
-        function renderData(items) {
-            console.log("renderData appelé avec", items.length, "éléments");
+    function renderData(items) {
+        console.log("renderData appelé avec", items.length, "éléments");
 
-            leftPanel.empty();
-            markers.clearLayers();
+        leftPanel.empty();
+        markers.clearLayers();
 
-            if (!items.length) {
-                console.log("Aucune donnée à afficher");
-                leftPanel.html('<div class="text-muted">Aucune donnée disponible.</div>');
-                return;
-            }
+        if (!items.length) {
+            console.log("Aucune donnée à afficher");
+            leftPanel.html('<div class="text-muted">Aucune donnée disponible.</div>');
+            return;
+        }
 
-            $.each(items, function(idx, item) {
-                console.log("Ajout de l'item :", item);
-                const coords = (item.latitude && item.longitude) ?
-                    `(lat: ${item.latitude}, lon: ${item.longitude})` : '';
-                const url = item.url ? `<a href="${item.url}" target="_blank">Voir</a>` : '';
+        $.each(items, function(idx, item) {
+            console.log("Ajout de l'item :", item);
+            // const coords = (item.latitude && item.longitude) ?
+            //     `(lat: ${item.latitude}, lon: ${item.longitude})` : '';
+            const url = item.url ? `<a href="${item.url}" target="_blank">Voir</a>` : '';
 
-                const html = `
+            const html = `
                 <div class="list-group-item border-0 border-bottom d-flex justify-content-between align-items-center">
                     <div>
                         <strong>${item.libelle || 'Sans libellé'}</strong><br>
-                        ${url} ${coords}
+                        ${url} 
                     </div>
                     <button class="btn btn-sm btn-outline-danger btn-delete-item" data-id="${item.id}" title="Supprimer">
                         🗑
                     </button>
                 </div>
             `;
-                leftPanel.append(html);
+            leftPanel.append(html);
 
-                if (item.latitude && item.longitude) {
-                    const lat = parseFloat(item.latitude);
-                    const lon = parseFloat(item.longitude);
-                    if (!isNaN(lat) && !isNaN(lon)) {
-                        const popup = `<strong>${item.libelle || 'Sans titre'}</strong><br>${url}`;
-                        const marker = L.marker([lat, lon]).bindPopup(popup);
-                        markers.addLayer(marker);
-                    }
+            if (item.latitude && item.longitude) {
+                const lat = parseFloat(item.latitude);
+                const lon = parseFloat(item.longitude);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    const popup = `<strong>${item.libelle || 'Sans titre'}</strong><br>${url}`;
+                    const marker = L.marker([lat, lon]).bindPopup(popup);
+                    markers.addLayer(marker);
                 }
-            });
-
-            if (markers.getLayers().length > 0) {
-                map.fitBounds(markers.getBounds(), {
-                    padding: [30, 30]
-                });
             }
+        });
+
+        if (markers.getLayers().length > 0) {
+            map.fitBounds(markers.getBounds(), {
+                padding: [30, 30]
+            });
         }
+    }
 
-        // --- Clic sur les boutons de filtre ---
-        $('.btn-filter').on('click', function() {
-            const type = $(this).data('type');
-            const projet = $(this).data('projet');
-            console.log("Filtre cliqué :", type, "pour le projet :", projet);
+    // --- Clic sur les boutons de filtre ---
+    $('.btn-filter').on('click', function() {
+        const type = $(this).data('type');
+        const projet = $(this).data('projet');
+        console.log("Filtre cliqué :", type, "pour le projet :", projet);
 
-            leftPanel.html('<div class="text-muted">Chargement en cours...</div>');
+        leftPanel.html('<div class="text-muted">Chargement en cours...</div>');
 
-            $.ajax({
-                url: '/zf1/public/francetravailnew/getdata',
-                type: 'GET',
-                dataType: 'json',
-                data: {
-                    type: type,
-                    projet: projet
-                },
-                success: function(response) {
-                    console.log("Réponse AJAX getdata :", response);
-                    if (response.success) {
-                        renderData(response.data);
-                    } else {
-                        console.log("Erreur : données non disponibles");
-                        leftPanel.html(
-                            '<div class="text-danger">Erreur : données non disponibles.</div>'
-                        );
-                    }
-                },
-                error: function(xhr) {
-                    console.error("Erreur AJAX :", xhr.responseText);
+        $.ajax({
+            url: '/zf1/public/francetravailnew/getdata',
+            type: 'GET',
+            dataType: 'json',
+            data: {
+                type: type,
+                projet: projet
+            },
+            success: function(response) {
+                console.log("Réponse AJAX getdata :", response);
+                if (response.success) {
+                    renderData(response.data);
+                } else {
+                    console.log("Erreur : données non disponibles");
                     leftPanel.html(
-                        '<div class="text-danger">Erreur de communication avec le serveur.</div>'
+                        '<div class="text-danger">Erreur : données non disponibles.</div>'
                     );
                 }
-            });
+            },
+            error: function(xhr) {
+                console.error("Erreur AJAX :", xhr.responseText);
+                leftPanel.html(
+                    '<div class="text-danger">Erreur de communication avec le serveur.</div>'
+                );
+            }
         });
-
-        $(document).on('click', '.btn-select-projet', function() {
-            const projet = $(this).data('projet');
-            console.log("Projet sélectionné :", projet);
-
-            // Mise à jour des boutons filtres
-            $('.btn-filter').each(function() {
-                $(this).data('projet', projet); // nouveau projet selectionné
-            });
-
-            // --- Gestion de la classe active sur les boutons projets ---
-            $('.btn-select-projet').each(function() {
-                if ($(this).data('projet') === projet) {
-                    $(this)
-                        .removeClass('btn-outline-primary btn-outline-secondary')
-                        .addClass('btn-primary');
-                } else {
-                    // Remettre le style par défaut selon le type
-                    if ($(this).data('projet') === 'sans-projet') {
-                        $(this).removeClass('btn-primary').addClass('btn-outline-secondary');
-                    } else {
-                        $(this).removeClass('btn-primary').addClass('btn-outline-primary');
-                    }
-                }
-            });
-
-
-            $.ajax({
-                url: '/zf1/public/francetravailnew/getdashboarddata',
-                method: 'GET',
-                dataType: 'json',
-                data: {
-                    projet: projet
-                },
-                success: function(res) {
-                    console.log("Réponse AJAX dashboard :", res);
-
-                    $('.btn-filter[data-type="offres"] h4').text(res.totalOffreData || 0);
-                    $('.btn-filter[data-type="metiers"] h4').text(res.totalMetiersData || 0);
-                    $('.btn-filter[data-type="services"] h4').text(res.totalServicesData || 0);
-                    $('.btn-filter[data-type="entreprises"] h4').text(res
-                        .totalEntreprisesData || 0);
-
-                    leftPanel.empty();
-                    if (!res.offresData.length) {
-                        console.log("Aucune offre pour ce projet");
-                        leftPanel.text('Aucune offre pour ce projet.');
-                    } else {
-                        leftPanel.text(
-                            'Cliquez sur un bouton ci-dessus pour voir les données.');
-
-                    }
-
-                    markers.clearLayers();
-                    res.offresData.forEach(offre => {
-                        if (offre.latitude && offre.longitude) {
-                            console.log("Ajout marqueur :", offre.libelle, offre
-                                .latitude, offre.longitude);
-                            const marker = L.marker([offre.latitude, offre.longitude])
-                                .bindPopup(`<strong>${offre.libelle}</strong>`);
-                            markers.addLayer(marker);
-                        }
-                    });
-                    if (markers.getLayers().length) map.fitBounds(markers.getBounds());
-                },
-                error: function(err) {
-                    console.error("Erreur AJAX dashboard :", err);
-                }
-            });
-        });
-
-        $(document).on('click', '.btn-delete-item', function() {
-            const id = $(this).data('id');
-            const itemDiv = $(this).closest('.list-group-item');
-            console.log("Suppression de l'item id :", id);
-
-            if (!confirm('Supprimer cet élément ?')) return;
-
-            $.ajax({
-                url: '/zf1/public/francetravailnew/deleteitem',
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    id: id
-                },
-                success: function(res) {
-                    console.log("Résultat suppression :", res);
-                    alert(res.message);
-                    if (res.success) itemDiv.remove();
-                },
-                error: function() {
-                    console.error(
-                        'Erreur de communication avec le serveur pour la suppression');
-                    alert('Erreur de communication avec le serveur.');
-                }
-            });
-        });
-
     });
+
+    $(document).on('click', '.btn-select-projet', function() {
+        const projet = $(this).data('projet');
+        console.log("Projet sélectionné :", projet);
+
+        // Mise à jour des boutons filtres
+        $('.btn-filter').each(function() {
+            $(this).data('projet', projet); // nouveau projet selectionné
+        });
+
+        // --- Gestion de la classe active sur les boutons projets ---
+        $('.btn-select-projet').each(function() {
+            if ($(this).data('projet') === projet) {
+                $(this)
+                    .removeClass('btn-outline-primary btn-outline-secondary')
+                    .addClass('btn-primary');
+            } else {
+                // Remettre le style par défaut selon le type
+                if ($(this).data('projet') === 'sans-projet') {
+                    $(this).removeClass('btn-primary').addClass('btn-outline-secondary');
+                } else {
+                    $(this).removeClass('btn-primary').addClass('btn-outline-primary');
+                }
+            }
+        });
+
+
+        $.ajax({
+            url: '/zf1/public/francetravailnew/getdashboarddata',
+            method: 'GET',
+            dataType: 'json',
+            data: {
+                projet: projet
+            },
+            success: function(res) {
+                console.log("Réponse AJAX dashboard :", res);
+
+                $('.btn-filter[data-type="offres"] h4').text(res.totalOffreData || 0);
+                $('.btn-filter[data-type="metiers"] h4').text(res.totalMetiersData || 0);
+                $('.btn-filter[data-type="services"] h4').text(res.totalServicesData || 0);
+                $('.btn-filter[data-type="entreprises"] h4').text(res
+                    .totalEntreprisesData || 0);
+
+                leftPanel.empty();
+                if (!res.offresData.length) {
+                    console.log("Aucune offre pour ce projet");
+                    leftPanel.text('Aucune offre pour ce projet.');
+                } else {
+                    leftPanel.text(
+                        'Cliquez sur un bouton ci-dessus pour voir les données.');
+
+                }
+
+                markers.clearLayers();
+                res.offresData.forEach(offre => {
+                    if (offre.latitude && offre.longitude) {
+                        console.log("Ajout marqueur :", offre.libelle, offre
+                            .latitude, offre.longitude);
+                        const marker = L.marker([offre.latitude, offre.longitude])
+                            .bindPopup(`<strong>${offre.libelle}</strong>`);
+                        markers.addLayer(marker);
+                    }
+                });
+                if (markers.getLayers().length) map.fitBounds(markers.getBounds());
+            },
+            error: function(err) {
+                console.error("Erreur AJAX dashboard :", err);
+            }
+        });
+    });
+
+    $(document).on('click', '.btn-delete-item', function() {
+        const id = $(this).data('id');
+        const itemDiv = $(this).closest('.list-group-item');
+        console.log("Suppression de l'item id :", id);
+
+        if (!confirm('Supprimer cet élément ?')) return;
+
+        $.ajax({
+            url: '/zf1/public/francetravailnew/deleteitem',
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                id: id
+            },
+            success: function(res) {
+                console.log("Résultat suppression :", res);
+                alert(res.message);
+                if (res.success) itemDiv.remove();
+            },
+            error: function() {
+                console.error(
+                    'Erreur de communication avec le serveur pour la suppression');
+                alert('Erreur de communication avec le serveur.');
+            }
+        });
+    });
+
+});
 </script>
 
 
 <style>
+.offcanvas {
+    max-width: 100%;
+}
+
+@media (min-width: 768px) {
     .offcanvas {
-        max-width: 100%;
+        max-width: 90%;
     }
+}
 
-    @media (min-width: 768px) {
-        .offcanvas {
-            max-width: 90%;
-        }
-    }
+.card {
+    border-radius: 10px;
+}
 
-    .card {
-        border-radius: 10px;
-    }
+#master-map {
+    min-height: 40vh;
+    border-radius: 8px;
+}
 
-    #master-map {
-        min-height: 40vh;
-        border-radius: 8px;
-    }
-
-    #left-panel {
-        background-color: #f9f9f9;
-    }
+#left-panel {
+    background-color: #f9f9f9;
+}
 </style>
