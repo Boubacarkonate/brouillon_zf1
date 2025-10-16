@@ -138,6 +138,8 @@ class FranceTravailnewController extends Zend_Controller_Action
             "Projet 5" => ["metier" => 'ingénieur agronome', "codeInsee" => 80008]
         ];
 
+        $projetNom = $this->_getParam('projetnom', 'Projet 1');
+        $this->view->projetNom = $projetNom;
         // ✅ Projet courant (par défaut : Projet 1)
         $currentProjet = $this->_getParam('projet', 'Projet 1');
         $this->view->currentProjet = $currentProjet;

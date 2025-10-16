@@ -103,50 +103,49 @@
 <div class="card shadow-sm mb-4 border-0">
 
     <div class="card-body">
-        <form method="get" class="d-flex flex-nowrap align-items-end gap-3 overflow-auto">
+        <form method="get" class="d-flex flex-nowrap align-items-end gap-3 ">
 
-            <div style="min-width:220px;">
+            <div class="w-25">
                 <label class="form-label text-muted">Projet</label>
-                <select id="selectProjet" class="form-select shadow-sm">
+                <select id="selectProjet" class="form-select shadow-sm" name="projetnom">
                     <option value="">-- Choisir un projet --</option>
-                    <?php foreach ($this->projet as $nom => $data): ?>
-                        <option value="<?= htmlspecialchars(json_encode(array_merge($data, ['nomProjet' => $nom]))) ?>">
+                    <?php foreach ($this->projets as $nom => $data): ?>
+                        <option value="<?= htmlspecialchars(json_encode(array_merge($data, ['nomProjet' => $nom]))) ?>"
+                            <?= ($this->projetNom === $nom) ? 'selected' : '' ?>>
                             <?= $this->escape($nom) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
-
             </div>
 
-            <div style="min-width:220px;">
+
+
+            <div class="w-25">
                 <label class="form-label text-muted">Mots-clés</label>
                 <div class="input-group shadow-sm">
-                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                    <input type="text" name="motsCles" id="motsCles" class="form-control border-start-0"
+                    <input type="text" name="motsCles" id="motsCles" class="form-control border-start-0 "
                         value="<?= $this->escape($this->params['motsCles'] ?? '') ?>">
                 </div>
             </div>
 
-            <div style="min-width:180px;">
+            <div class="w-25">
                 <label class="form-label text-muted">Code Insee</label>
                 <div class="input-group shadow-sm">
-                    <span class="input-group-text bg-white"><i class="bi bi-geo-alt"></i></span>
                     <input type="text" name="commune" id="commune" class="form-control border-start-0"
                         value="<?= $this->escape($this->params['commune'] ?? '') ?>">
                 </div>
             </div>
 
-            <div style="min-width:180px;">
+            <div class="w-25">
                 <label class="form-label text-muted">Distance (km)</label>
                 <div class="input-group shadow-sm">
-                    <span class="input-group-text bg-white"><i class="bi bi-arrows-expand"></i></span>
                     <input type="number" name="distance" class="form-control border-start-0"
                         value="<?= $this->escape($this->params['distance'] ?? 100) ?>" min="0">
                 </div>
             </div>
 
             <?php foreach ($this->filtresDynamiques as $filtreNom => $valeurs): ?>
-                <div style="min-width:180px;">
+                <div class="w-25">
                     <label class="form-label text-muted"><?= ucfirst($this->escape($filtreNom)) ?></label>
                     <select name="<?= $this->escape($filtreNom) ?>" class="form-select shadow-sm">
                         <option value="">Tous</option>
@@ -160,9 +159,9 @@
                 </div>
             <?php endforeach; ?>
 
-            <div class="d-grid" style="min-width:150px;">
+            <div class="d-grid w-25">
                 <button type="submit" class="btn btn-secondary shadow-sm">
-                    <i class="bi bi-funnel"></i> Rechercher
+                    Rechercher
                 </button>
             </div>
         </form>
@@ -485,6 +484,24 @@
                 }
             });
         }
+
+        // ✅ Remplir automatiquement les champs si un projet est déjà sélectionné
+        if (selectProjet && selectProjet.value) {
+            try {
+                const data = JSON.parse(selectProjet.value);
+                console.log("Projet par défaut :", data);
+
+
+                document.getElementById('motsCles').value = data.metier;
+
+
+                document.getElementById('commune').value = data.codeInsee;
+
+            } catch (e) {
+                console.error("Erreur JSON projet (init):", e);
+            }
+        }
+
 
 
 
