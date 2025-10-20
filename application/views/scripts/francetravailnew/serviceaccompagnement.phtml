@@ -3,6 +3,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+<script src="/js/spinner.js"></script>
 
 <style>
     .pagination-sticky {
@@ -59,19 +60,24 @@
         margin-bottom: 1rem;
     }
 
-    .spinner {
-        width: 60px;
-        height: 60px;
-        border: 6px solid #ddd;
-        border-top-color: #007bff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
+    #spinner-overlay {
+        opacity: 1;
+        transition: opacity 0.4s ease;
     }
 
-    @keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
+    #spinner-overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* Apparition fluide du contenu */
+    #mainContent {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+    }
+
+    #mainContent:not(.d-none) {
+        opacity: 1;
     }
 </style>
 
@@ -87,18 +93,15 @@
     'totalEntreprisesData' => $this->totalEntreprisesData,
 ]) ?>
 
-<!-- Loader Overlay -->
-<div id="spinner-overlay" style="
-    position: fixed;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.9);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-">
-    <div class="spinner"></div>
+<!-- Loader Overlay (Bootstrap) -->
+<div id="spinner-overlay"
+    class="position-fixed top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex align-items-center justify-content-center"
+    style="z-index: 9999;">
+    <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+        <span class="visually-hidden">Chargement...</span>
+    </div>
 </div>
+
 
 <!-- 🔍 Filtres modernisés -->
 <div class="card shadow-sm mb-4 border-0">
@@ -346,27 +349,31 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const spinner = document.getElementById('spinner-overlay');
-        const content = document.getElementById('mainContent');
+        // const spinner = document.getElementById('spinner-overlay');
+        // const content = document.getElementById('mainContent');
         const services = <?= json_encode($this->services ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
         // Affiche le spinner immédiatement
-        spinner.style.display = "flex";
-        content.classList.add('d-none');
+        // spinner.style.display = "flex";
+        // content.classList.add('d-none');
 
         // -----------------------
-        // 🗺️ Initialisation carte
+        // 🗺️ Initialisation Leaflet
         // -----------------------
         const map = L.map("map").setView([46.5, 2.5], 6);
-        const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+        const tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '&copy; OpenStreetMap contributors'
+        });
         tileLayer.addTo(map);
 
         const markers = L.markerClusterGroup();
         const markerMap = {};
 
+        // Création des marqueurs
         services.forEach((s, idx) => {
             const lat = s.lat ?? s.structure?.lat ?? null;
             const lon = s.lon ?? s.structure?.lon ?? null;
+
             if (lat && lon) {
                 const marker = L.marker([lat, lon]).bindPopup(
                     `<strong>${s.structure?.nom ?? s.label ?? ''}</strong><br>
@@ -386,40 +393,51 @@
         // -----------------------
         // 🌀 Synchronisation loader
         // -----------------------
-        let mapReady = false;
-        let domReady = false;
-        let markersReady = true;
+        // let mapReady = false;
+        // let domReady = false;
+        // let markersReady = true;
 
-        function maybeHideSpinner() {
-            if (mapReady && domReady && markersReady) {
-                setTimeout(() => {
-                    spinner.style.display = "none";
-                    content.classList.remove('d-none');
+        // function maybeHideSpinner() {
+        //     if (mapReady && domReady && markersReady) {
+        //         setTimeout(() => {
+        //             spinner.classList.add('hidden');
+        //             spinner.addEventListener('transitionend', () => {
+        //                 spinner.style.display = "none";
+        //             }, {
+        //                 once: true
+        //             });
 
-                    // 👇 Corrige le problème de carte non rendue
-                    setTimeout(() => {
-                        map.invalidateSize();
-                        if (markers.getLayers().length) {
-                            map.fitBounds(markers.getBounds());
-                        }
-                    }, 100);
-                }, 200);
-            }
-        }
+        //             content.classList.remove('d-none');
 
-        // Quand Leaflet a fini de charger ses tuiles
-        tileLayer.on('load', () => {
-            mapReady = true;
-            maybeHideSpinner();
-        });
+        //             // 👇 Correction affichage Leaflet
+        //             setTimeout(() => {
+        //                 map.invalidateSize();
+        //                 if (markers.getLayers().length) {
+        //                     map.fitBounds(markers.getBounds());
+        //                 } else {
+        //                     map.setView([46.5, 2.5], 6); // vue par défaut France
+        //                 }
+        //             }, 100);
+        //         }, 200);
+        //     }
+        // }
 
-        // Quand le DOM est prêt
-        window.requestAnimationFrame(() => {
-            setTimeout(() => {
-                domReady = true;
-                maybeHideSpinner();
-            }, 300);
-        });
+        // // Quand les tuiles sont chargées (Leaflet)
+        // tileLayer.on('load', () => {
+        //     // petit délai pour s'assurer que les clusters sont rendus
+        //     setTimeout(() => {
+        //         mapReady = true;
+        //         maybeHideSpinner();
+        //     }, 150);
+        // });
+
+        // // Quand le DOM est prêt
+        // window.requestAnimationFrame(() => {
+        //     setTimeout(() => {
+        //         domReady = true;
+        //         maybeHideSpinner();
+        //     }, 300);
+        // });
 
         // -----------------------
         // 🎯 Boutons : zoom carte
@@ -463,11 +481,12 @@
         });
     });
 
+    // -----------------------
+    // 💾 AJAX : Enregistrement service
+    // -----------------------
     $(document).ready(function() {
         $(document).on('click', '.btn-enregistrer', function() {
             const btn = $(this);
-
-            // Récupération des données du bouton
             const service = {
                 libelle: btn.data('libelle'),
                 url: btn.data('url'),
