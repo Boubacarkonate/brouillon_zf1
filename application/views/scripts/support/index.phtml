@@ -1,0 +1,77 @@
+<div class="container">
+    <div class="left bg-light rounded-2 border border-2 border-light shadow-lg ">
+        <div class="contenu-gauche m-2">
+            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
+            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Corrupti accusantium voluptate quasi neque,
+                consequatur blanditiis voluptatibus iust.</p>
+            <button class="btn btn-primary">Ouvrir</button>
+        </div>
+    </div>
+    <div class="right ">
+        <div class="top bg-light rounded-2 border border-2 border-light shadow-lg ">Droite Haut</div>
+        <div class="bottom rounded-2">
+            <div class="bottom-left bg-light  border border-2 border-light shadow-lg ">Bas Gauche</div>
+            <div class="bottom-right bg-light  border border-2 border-light shadow-lg ">Bas Droite</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Grille principale : gauche / droite */
+    .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        /* 2 colonnes égales */
+        height: 70vh;
+        /* pleine hauteur */
+        gap: 10px;
+    }
+
+    .left {
+        /* background-color: lightblue;
+        display: flex;
+        align-items: center;
+        justify-content: center; */
+    }
+
+    .contenu-gauche {
+        gap: 5px;
+    }
+
+    /* Colonne de droite : haut / bas */
+    .right {
+        display: grid;
+        grid-template-rows: 1fr 1fr;
+        /* 2 lignes égales */
+        gap: 10px;
+    }
+
+    .top {
+        /* background-color: lightcoral;
+        display: flex;
+        align-items: center;
+        justify-content: center; */
+    }
+
+    /* Le bas de droite devient une grille à 2 colonnes */
+    .bottom {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        /* 2 carrés côte à côte */
+        gap: 10px;
+    }
+
+    .bottom-left {
+        /* background-color: lightgreen;
+        display: flex;
+        align-items: center;
+        justify-content: center; */
+    }
+
+    .bottom-right {
+        /* background-color: red;
+        display: flex;
+        align-items: center;
+        justify-content: center; */
+    }
+</style>
