@@ -1,0 +1,46 @@
+<h2>Page de test - Alertes "autres"</h2>
+
+<ul>
+    <?php foreach ($this->briques as $brique): ?>
+        <li>
+            <strong><?= $this->escape($brique['nom_affiche']) ?></strong>
+            <button class="ouvrir" data-nom="<?= $this->escape($brique['requete']) ?>">
+                Ouvrir
+            </button>
+            <button class="exec" data-req="<?= $this->escape($brique['requete']) ?>">
+                Charger données
+            </button>
+            <div id="result-<?= $this->escape($brique['requete']) ?>"
+                style="margin:5px 0; padding:5px; background:#f4f4f4;"></div>
+        </li>
+    <?php endforeach; ?>
+</ul>
+
+<script>
+    document.querySelectorAll('.ouvrir').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const nom = btn.dataset.nom;
+            const res = await fetch('/zf1/public/uxalertes/ouvrirreq?nom=' + encodeURIComponent(nom));
+            const data = await res.json();
+            document.getElementById('result-' + nom).innerHTML =
+                '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        });
+    });
+
+    document.querySelectorAll('.exec').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const req = btn.dataset.req;
+            const res = await fetch('/zf1/public/uxalertes/executereqdatatable?requete=' +
+                encodeURIComponent(
+                    req));
+            const data = await res.json();
+            document.getElementById('result-' + req).innerHTML =
+                '<table border="1" cellpadding="5">' +
+                '<tr><th>ID</th><th>Nom</th><th>Valeur</th></tr>' +
+                data.retour.data.map(row =>
+                    `<tr><td>${row.id}</td><td>${row.nom}</td><td>${row.valeur}</td></tr>`
+                ).join('') +
+                '</table>';
+        });
+    });
+</script>
