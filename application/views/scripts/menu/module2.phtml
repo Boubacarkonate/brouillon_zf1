@@ -1,0 +1,10 @@
+<h2>Module</h2>
+<ul>
+    <?php foreach ($this->menuItems as $item): ?>
+        <li><a href="<?php echo $this->escape($item['url']); ?>">
+                <?php echo $this->escape($item['label']); ?>
+            </a></li>
+    <?php endforeach; ?>
+</ul>
+
+<?php echo $this->message; ?>

@@ -1,7 +1,7 @@
 <?php
-class IndexController extends Zend_Controller_Action
-{
 
+class MenuController extends Zend_Controller_Action
+{
     public function init()
     {
         // Fake role pour test
@@ -28,8 +28,19 @@ class IndexController extends Zend_Controller_Action
         // On passe le menu filtré à la vue
         $this->view->menuItems = $menuItems;
     }
+
     public function indexAction()
     {
-        $this->view->message = "Hello ZF1-Future on PHP 8.2!";
+        // Ici, on peut ajouter d'autres variables spécifiques à index si nécessaire
+    }
+
+    public function module1Action()
+    {
+        $this->view->message = 'Je suis le premier module';
+    }
+
+    public function module2Action()
+    {
+        $this->view->message = 'Je suis le deuxième module';
     }
 }

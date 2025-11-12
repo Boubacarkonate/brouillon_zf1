@@ -7,9 +7,9 @@
                 <h6 class="text-secondary text-uppercase">Menu</h6>
                 <div class="list-group list-group-flush">
                     <?php foreach ($this->menuItems as $item): ?>
-                        <a href="<?= $item['url'] ?>" class="list-group-item list-group-item-action menu-link">
-                            <?= $this->escape($item['label']) ?>
-                        </a>
+                    <a href="<?= $item['url'] ?>" class="list-group-item list-group-item-action menu-link">
+                        <?= $this->escape($item['label']) ?>
+                    </a>
                     <?php endforeach; ?>
                 </div>
             </div>
@@ -18,9 +18,9 @@
         <!-- Colonne droite : contenu principal -->
         <div class="col-9">
             <h2>Module</h2>
+            <?php echo $this->message; ?>
             <!-- Ici tu peux mettre tout le contenu spécifique à l'action -->
         </div>
 
     </div>
-
-</div> <?php echo $this->message; ?>
+</div>
